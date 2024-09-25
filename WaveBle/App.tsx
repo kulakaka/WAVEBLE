@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Button, View, Text, PermissionsAndroid, Platform, Alert, SafeAreaView } from 'react-native';
 import { BleManager, Device } from 'react-native-ble-plx';
 
+import OnTheDevice from './useBLE';
+import OffTheDevice from './useBLE';
+
+
 const App = () => {
   const [bleManager] = useState(new BleManager());
   const [devices, setDevices] = useState<Device[]>([]);
@@ -67,24 +71,62 @@ const App = () => {
         return;
       }
       if (device && device.name === 'ESP32') {
-        bleManager.stopDeviceScan();
-        console.log('Device found:', device);
-      }
-    });
+        
+        setDevices((prevState) => {
+          if (!prevState.find((prevDevice) => prevDevice.id === device.id)) {
+            return [...prevState, device];
+          }
+          connect(device);
+          bleManager.stopDeviceScan();
+          console.log('Device found:', device);
+          return prevState;
+        })
+        
+    }});
   };
+
+  const connect = async (device: Device) => { 
+    try{
+      const connectedDevice = await bleManager.connectToDevice(device.id);
+      console.log('Connected to device', connectedDevice.name);
+
+      await connectedDevice.discoverAllServicesAndCharacteristics();
+    }catch(error){
+      console.log('Error connecting to device', error);
+    }
+  };
+
 
   const stopScan = () => {
     bleManager.stopDeviceScan();
+    setScanning(false);
+    setDevices([]);
   }; 
 
-  
+  const DisconnectFromDevice = async () => {
+    if (devices.length === 0) {
+      console.log('No devices to disconnect');
+      return;
+    }
+    const device = devices[0]; // Assuming you want to disconnect the first device in the list
+    try{
+      await bleManager.cancelDeviceConnection(device.id);
+      console.log('Disconnected from device');
+    }catch(error){
+      console.log('Error disconnecting from device', error);
+    }
+  };
+
+
   return (
     <SafeAreaView>
       <View>
         <Text>Wave Therapeutics BLE App</Text>
         <Button title="Scan for Devices" onPress={scanAndConnect} />
-          
-        <Button title="Termiate The Connection" onPress={stopScan} />
+        <Button title="Stop Scan" onPress={stopScan} />
+        <Button title="Disconnect" onPress={DisconnectFromDevice} />
+        {/* <Button title="Turn On Device" onPress={OnTheDevice()} />
+        <Button title="Turn Off Device" onPress={OffTheDevice()} /> */}
       </View>
     </SafeAreaView>
   );
