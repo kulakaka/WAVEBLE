@@ -1,36 +1,49 @@
 import React, { useEffect, useState } from 'react';
-import { Button, View, Text, PermissionsAndroid, Platform, Alert, SafeAreaView } from 'react-native';
-import { BleManager, Device } from 'react-native-ble-plx';
+import { Button, View, 
+  Text, 
+  PermissionsAndroid, 
+  Platform, Alert, 
+  SafeAreaView,ScrollView,
+  TouchableOpacity,
+  StyleSheet
+   } from 'react-native';
+import { BleManager, Characteristic, Device, State } from 'react-native-ble-plx';
+// import utf8 from 'utf8';
+import  base64  from 'react-native-base64';
 
-import OnTheDevice from './useBLE';
-import OffTheDevice from './useBLE';
 
+const SERVICE_UUID ="4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+const CHARACTERISTIC_UUID_TX = "db000752-8165-4eca-bcbd-8cad0f11127c"
+
+const bleManager = new BleManager();
 
 const App = () => {
-  const [bleManager] = useState(new BleManager());
   const [devices, setDevices] = useState<Device[]>([]);
   const [scanning, setScanning] = useState(false);
+  //What device is connected?
+  const [connectedDevice,setConnectedDevice] = useState<Device | null>(null);
+  //Is a device connected?
+  const [isConnected, setIsConnected] = useState(false);
+  const [isModealVisible, setIsModealVisible] = useState(false);
+  const [ledStatus, setLedStatus] = useState('OFF');
+
 
   useEffect(() => {
-    const subscription = bleManager.onStateChange(state => {
-      if (state === 'PoweredOn') {
-        console.log('BLE powered on');
-        scanAndConnect();
+   
+      const subscription =  bleManager.onStateChange(async state => {
+        
+        if (state === 'PoweredOn') {
+          console.log('BLE powered on');
+          await requestPermissions();
+        }
+      }, true);
+        
+      return () => 
         subscription.remove();
-      }
-      else {
-        console.log('BLE is not available');
-      }
-    }, true);
-    (async () => {
-      if (Platform.OS === 'android' && Platform.Version >= 23) {
-        await requestPermissions();
-      }
-    })();
-    return () => {
-      bleManager.destroy(); // Cleanup on component unmount
-    };
-  }, [bleManager]);
+    },[bleManager]
+  );
+
+
 
   const requestPermissions = async () => {
     if (Platform.OS === 'ios') {
@@ -63,73 +76,142 @@ const App = () => {
     return false;
   };
 
+
   const scanAndConnect = () => {
+    try{
     bleManager.startDeviceScan(null, null, (error, device) => {
-      console.log(device);
+      console.log(device?.name);
       if (error) {
         console.log('error', error);
         return;
       }
-      if (device && device.name === 'ESP32') {
-        
+      if (device && device.name) {
         setDevices((prevState) => {
           if (!prevState.find((prevDevice) => prevDevice.id === device.id)) {
             return [...prevState, device];
           }
-          connect(device);
-          bleManager.stopDeviceScan();
-          console.log('Device found:', device);
           return prevState;
-        })
-        
-    }});
-  };
+        });
 
-  const connect = async (device: Device) => { 
-    try{
-      const connectedDevice = await bleManager.connectToDevice(device.id);
-      console.log('Connected to device', connectedDevice.name);
+      if (device.name === 'ESP32') {
+        console.log('Device found',device);
+        setConnectedDevice(device);
+        bleManager.stopDeviceScan();
+        connect(device);
 
-      await connectedDevice.discoverAllServicesAndCharacteristics();
-    }catch(error){
-      console.log('Error connecting to device', error);
+      }
+    }
+    });
+    } catch (error) {
+      console.log('Error scanning for devices', error);
     }
   };
 
+ 
+  const connect = async (device: Device) => { 
+    console.log('Connecting to device', device.id);
+    // bleManager.connectToDevice(device.id)
+    await bleManager.connectToDevice(device.id)
+    .then((device) => {
+      console.log('Connected to device', device.name);
+      setIsConnected(true);
+      setConnectedDevice(device);
+      setIsModealVisible(true);
+      return device.discoverAllServicesAndCharacteristics();
+    })
+    return true;
 
-  const stopScan = () => {
-    bleManager.stopDeviceScan();
-    setScanning(false);
-    setDevices([]);
-  }; 
+  };
 
   const DisconnectFromDevice = async () => {
-    if (devices.length === 0) {
-      console.log('No devices to disconnect');
+    if (!connectedDevice){
+      console.log('No device currently connected');
       return;
     }
-    const device = devices[0]; // Assuming you want to disconnect the first device in the list
+    if (connectedDevice.id !== connectedDevice.id){
+      console.log('The device you are trying to disconnect is not the connected device');
+      return;
+    }
     try{
-      await bleManager.cancelDeviceConnection(device.id);
-      console.log('Disconnected from device');
+      await bleManager.cancelDeviceConnection(connectedDevice.id);
+      // await connectedDevice.cancelConnection();
+      setIsConnected(false);
+      setConnectedDevice(null);
+      console.log('Disconnected from device', connectedDevice.name);
     }catch(error){
       console.log('Error disconnecting from device', error);
     }
   };
 
+  const toggleLed = async (status: string) => {
+    if (!connectedDevice) {
+      console.log('No device connected');
+      return;
+    }
+    
+    if (status === 'OFF') 
+      {
+        bleManager.writeCharacteristicWithResponseForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          base64.encode('1')
+        )
+        .then(Characteristic => {
+          console.log('LED Turned ON');
+        }
+        )
+      }
+    if (status === 'ON') 
+      {
+        bleManager.writeCharacteristicWithResponseForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          base64.encode('2')
+        )
+        .then(Characteristic => {
+          console.log('LED Turned OFF');
+        }
+        )
+      }
+
+
+
+    setLedStatus(status);
+  };
 
   return (
+    
     <SafeAreaView>
-      <View>
         <Text>Wave Therapeutics BLE App</Text>
-        <Button title="Scan for Devices" onPress={scanAndConnect} />
-        <Button title="Stop Scan" onPress={stopScan} />
-        <Button title="Disconnect" onPress={DisconnectFromDevice} />
-        {/* <Button title="Turn On Device" onPress={OnTheDevice()} />
-        <Button title="Turn Off Device" onPress={OffTheDevice()} /> */}
+         {/* Connect Button */}
+      <View>
+        <TouchableOpacity style={{width: 120}}>
+          {!isConnected ? (
+            <Button
+              title="Connect"
+              onPress={() => {
+                scanAndConnect();
+              }}
+              disabled={false}
+            />
+          ) : (
+            <Button
+              title="Disonnect"
+              onPress={() => {
+                DisconnectFromDevice();
+              }}
+              disabled={false}
+            />
+          )}
+        </TouchableOpacity>
+        <Button title="Toggle LED" onPress={() => toggleLed(ledStatus === 'ON' ? 'OFF' : 'ON')} />
       </View>
     </SafeAreaView>
   );
 };
 
 export default App;
+
+
