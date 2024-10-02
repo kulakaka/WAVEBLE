@@ -152,15 +152,28 @@ const App = () => {
     if (status === 'OFF') 
       {
         bleManager.writeCharacteristicWithResponseForDevice(
-          connectedDevice.id,
+          connectedDevice.id, 
           SERVICE_UUID,
           CHARACTERISTIC_UUID_TX,
           base64.encode('1')
         )
-        .then(Characteristic => {
-          console.log('LED Turned ON');
-        }
-        )
+        .then(() => {
+          bleManager.monitorCharacteristicForDevice(
+            connectedDevice.id,
+            SERVICE_UUID,
+            CHARACTERISTIC_UUID_TX,
+            (error, characteristic) => {
+              if (error) {
+                console.log('Error monitoring characteristic', error);
+                return;
+              }
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            console.log('LED Status:', decodedValue);
+      
+            }        
+          )
+      })
       }
     if (status === 'ON') 
       {
@@ -170,10 +183,23 @@ const App = () => {
           CHARACTERISTIC_UUID_TX,
           base64.encode('2')
         )
-        .then(Characteristic => {
-          console.log('LED Turned OFF');
-        }
-        )
+        .then(() => {
+          bleManager.monitorCharacteristicForDevice(
+            connectedDevice.id,
+            SERVICE_UUID,
+            CHARACTERISTIC_UUID_TX,
+            (error, characteristic) => {
+              if (error) {
+                console.log('Error monitoring characteristic', error);
+                return;
+              }
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            console.log('LED Status:', decodedValue);
+      
+            }        
+          )
+      })
       }
 
 
