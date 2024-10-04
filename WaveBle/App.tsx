@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,} from 'react';
 import { Button, View, 
   Text, 
   PermissionsAndroid, 
@@ -19,7 +19,6 @@ const bleManager = new BleManager();
 
 const App = () => {
   const [devices, setDevices] = useState<Device[]>([]);
-  const [scanning, setScanning] = useState(false);
   //What device is connected?
   const [connectedDevice,setConnectedDevice] = useState<Device | null>(null);
   //Is a device connected?
@@ -155,7 +154,7 @@ const App = () => {
           connectedDevice.id, 
           SERVICE_UUID,
           CHARACTERISTIC_UUID_TX,
-          base64.encode('1')
+          base64.encode('2')
         )
         .then(() => {
           bleManager.monitorCharacteristicForDevice(
@@ -170,7 +169,6 @@ const App = () => {
             const value = characteristic?.value;
             const decodedValue = value ? base64.decode(value) : '';
             console.log('LED Status:', decodedValue);
-      
             }        
           )
       })
@@ -181,7 +179,7 @@ const App = () => {
           connectedDevice.id,
           SERVICE_UUID,
           CHARACTERISTIC_UUID_TX,
-          base64.encode('2')
+          base64.encode('1')
         )
         .then(() => {
           bleManager.monitorCharacteristicForDevice(
@@ -232,7 +230,8 @@ const App = () => {
             />
           )}
         </TouchableOpacity>
-        <Button title="Toggle LED" onPress={() => toggleLed(ledStatus === 'ON' ? 'OFF' : 'ON')} />
+        <Button title="ON AND OFF" onPress={() => toggleLed(ledStatus === 'ON' ? 'OFF' : 'ON')} />
+      
       </View>
     </SafeAreaView>
   );
