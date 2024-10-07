@@ -12,7 +12,6 @@ import { BleManager, Characteristic, Device, State } from 'react-native-ble-plx'
 import  base64  from 'react-native-base64';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import ControlPage from './compnents/controlPage';
 import { Input } from '@mui/material';
 
 const Stack = createNativeStackNavigator();
@@ -117,7 +116,7 @@ const App = () => {
     // bleManager.connectToDevice(device.id)
     await bleManager.connectToDevice(device.id)
     .then((device) => {
-      console.log('Connected to device', device.name);
+      console.log('Connected to device', device);
       setIsConnected(true);
       setConnectedDevice(device);
       setIsModealVisible(true);
@@ -138,7 +137,6 @@ const App = () => {
     }
     try{
       await bleManager.cancelDeviceConnection(connectedDevice.id);
-      // await connectedDevice.cancelConnection();
       setIsConnected(false);
       setConnectedDevice(null);
       console.log('Disconnected from device', connectedDevice.name);
@@ -204,22 +202,26 @@ const App = () => {
           )
       })
       }
-
-
-
     setLedStatus(status);
   };
 
   return (
     
     <SafeAreaView>
-        <Text>Wave Therapeutics BLE App</Text>
-         {/* Connect Button */}
-      <View>
+        <Text style={{fontSize:20, textAlign:'center',fontWeight:'bold'}}>Wave Therapeutics BLE TEST App</Text>
+      <View>  
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, marginTop:20}}>
+      
+          <Button title="Pump" onPress={() => {}} />
+          <Button title="Sol A" onPress={() => {}} />
+          <Button title="Sol B" onPress={() => {}} />
+          <Button title="Sol c" onPress={() => {}} />
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <TouchableOpacity style={{width: 120}}>
           {!isConnected ? (
             <Button
-              title="Connect"
+              title="Connect ble"
               onPress={() => {
                 scanAndConnect();
               }}
@@ -236,6 +238,8 @@ const App = () => {
           )}
         </TouchableOpacity>
         <Button title="ON AND OFF" onPress={() => toggleLed(ledStatus === 'ON' ? 'OFF' : 'ON')} />
+          <Button title="qr code" onPress={() => {}} />
+        </View>
       </View>
         <View>
           <TextInput
@@ -244,26 +248,21 @@ const App = () => {
             value={text}
             placeholder='Full Cycle Time'
           />
+          <Text style={{margin:12,}}>PARTIAL CYCLE TIME:</Text>
           <TextInput
             style={styles.input}
             onChangeText={onChangeText}
             value={text}
             placeholder='Full Cycle Time'
           />
-          <TextInput
-            style={styles.input}
-            onChangeText={onChangeText}
-            value={text}
-            placeholder='Full Cycle Time'
-          />
-          <TextInput
-            style={styles.input}
-            onChangeText={onChangeText}
-            value={text}
-            placeholder='Full Cycle Time'
-          />
+          
         </View>
-
+        <Button title="upload" onPress={() =>{}} />
+          <View>
+            <ScrollView style={{ margin: 10, maxHeight: 200, borderWidth: 0, padding: 10 }}>
+              <Text>Output will be displayed here...</Text>
+            </ScrollView>
+          </View>
     </SafeAreaView>
 
 
