@@ -4,14 +4,18 @@ import { Button, View,
   PermissionsAndroid, 
   Platform, Alert, 
   SafeAreaView,ScrollView,
-  TouchableOpacity,
+  TouchableOpacity,TextInput,
   StyleSheet
    } from 'react-native';
 import { BleManager, Characteristic, Device, State } from 'react-native-ble-plx';
 // import utf8 from 'utf8';
 import  base64  from 'react-native-base64';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import ControlPage from './compnents/controlPage';
+import { Input } from '@mui/material';
 
-
+const Stack = createNativeStackNavigator();
 const SERVICE_UUID ="4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 const CHARACTERISTIC_UUID_TX = "db000752-8165-4eca-bcbd-8cad0f11127c"
 
@@ -26,6 +30,7 @@ const App = () => {
   const [isModealVisible, setIsModealVisible] = useState(false);
   const [ledStatus, setLedStatus] = useState('OFF');
 
+  const [text,onChangeText] = React.useState("");
 
   useEffect(() => {
    
@@ -231,12 +236,47 @@ const App = () => {
           )}
         </TouchableOpacity>
         <Button title="ON AND OFF" onPress={() => toggleLed(ledStatus === 'ON' ? 'OFF' : 'ON')} />
-      
       </View>
+        <View>
+          <TextInput
+            style={styles.input}
+            onChangeText={onChangeText}
+            value={text}
+            placeholder='Full Cycle Time'
+          />
+          <TextInput
+            style={styles.input}
+            onChangeText={onChangeText}
+            value={text}
+            placeholder='Full Cycle Time'
+          />
+          <TextInput
+            style={styles.input}
+            onChangeText={onChangeText}
+            value={text}
+            placeholder='Full Cycle Time'
+          />
+          <TextInput
+            style={styles.input}
+            onChangeText={onChangeText}
+            value={text}
+            placeholder='Full Cycle Time'
+          />
+        </View>
+
     </SafeAreaView>
+
+
   );
 };
-
+const styles = StyleSheet.create({
+  input: {
+    height: 40,
+    margin: 12,
+    borderWidth: 1,
+    padding: 10,
+  },
+});
 export default App;
 
 
