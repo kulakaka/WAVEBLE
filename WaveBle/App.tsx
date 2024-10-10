@@ -11,12 +11,8 @@ import {
 import { BleManager, Characteristic, Device, State } from 'react-native-ble-plx';
 // import utf8 from 'utf8';
 import base64 from 'react-native-base64';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Input } from '@mui/material';
-import QRCodeScannerScreen from './compnents/QRScannerScreen';
+import QRCodeScanner from 'react-native-qrcode-scanner';
 
-const Stack = createNativeStackNavigator();
 const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 const CHARACTERISTIC_UUID_TX = "db000752-8165-4eca-bcbd-8cad0f11127c"
 
@@ -37,7 +33,9 @@ const App = () => {
 
   const [text, onChangeText] = React.useState("");
   const [outputText, setOutputText] = useState('Output will be displayed here...');
-  const [inputValue, setInputValue] = useState('');
+  const [fullcycleValue, setfullycycleValue] = useState(0);
+  const [halfccycleValue, sethalfcycleValue] = useState(0);
+  const [pumpTime, setPumpTime] = useState(0);
 
   useEffect(() => {
 
@@ -160,12 +158,12 @@ const App = () => {
       return;
     }
 
-    if (status === 'OFF') {
+   
       bleManager.writeCharacteristicWithResponseForDevice(
         connectedDevice.id,
         SERVICE_UUID,
         CHARACTERISTIC_UUID_TX,
-        base64.encode('2')
+        base64.encode(status)
       )
         .then(() => {
           bleManager.monitorCharacteristicForDevice(
@@ -185,35 +183,22 @@ const App = () => {
             }
           )
         })
-    }
-    if (status === 'ON') {
-      bleManager.writeCharacteristicWithResponseForDevice(
-        connectedDevice.id,
-        SERVICE_UUID,
-        CHARACTERISTIC_UUID_TX,
-        base64.encode('1')
-      )
-        .then(() => {
-          bleManager.monitorCharacteristicForDevice(
-            connectedDevice.id,
-            SERVICE_UUID,
-            CHARACTERISTIC_UUID_TX,
-            (error, characteristic) => {
-              if (error) {
-                console.log('Error monitoring characteristic', error);
-                return;
-              }
-              const value = characteristic?.value;
-              const decodedValue = value ? base64.decode(value) : '';
-              console.log('LED Status:', decodedValue);
-              setOutputText(prevText => `${prevText}\n${decodedValue}`)
-
-            }
-          )
-        })
-    }
+    
     setLedStatus(status);
   };
+
+  
+const handleCycleChange = (text: any) => {
+  setfullycycleValue(text);
+  const halfCycle = text / 2;
+  sethalfcycleValue(halfCycle);
+
+}
+
+const handlePumpChange = (text: any) => {
+  setPumpTime(text);
+}
+
 
   const togglePump = async (status: string) => {
 
@@ -248,6 +233,37 @@ const App = () => {
       })
     setPumpStatus(status);
   }
+
+  const stopAll = async () => {
+    if(!connectedDevice){
+      console.log('No device connected');
+      return;
+    }
+    bleManager.writeCharacteristicWithResponseForDevice(
+      connectedDevice.id,
+      SERVICE_UUID,
+      CHARACTERISTIC_UUID_TX,
+      base64.encode('stop')
+    )
+      .then(() => {
+        bleManager.monitorCharacteristicForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          (error, characteristic) => {
+            if (error) {
+              console.log('Error monitoring characteristic', error);
+              return;
+            }
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            console.log('Stop Status:', decodedValue);
+            setOutputText(prevText => `${prevText}\n${decodedValue}`)
+
+          }
+        )
+      })  
+  };
 
   const toggleSolA = async (status: string) => {
     if (!connectedDevice) {
@@ -347,9 +363,40 @@ const App = () => {
       })
 
     setSolCStatus(status);
+  };
+
+  const updateCycleTime = (fullcycleValue:number,pumpTime:number)=>{
+     if (!connectedDevice) {
+      console.log('No device connected');
+      return;
+     }
+     const timeMessage = `set_times;${fullcycleValue};${pumpTime}`;
+     console.log('Time Message:', timeMessage);
+      bleManager.writeCharacteristicWithResponseForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          base64.encode(timeMessage)
+        )
+        .then(() => {
+          bleManager.monitorCharacteristicForDevice(
+            connectedDevice.id,
+            SERVICE_UUID,
+            CHARACTERISTIC_UUID_TX,
+            (error, characteristic) => {
+              if (error) {
+                console.log('Error monitoring characteristic', error);
+                return;
+              }
+              const value = characteristic?.value;
+              const decodedValue = value ? base64.decode(value) : '';
+              console.log('Cycle Time Status:', decodedValue);
+              setOutputText(prevText => `${prevText}\n${decodedValue}`)
+
+            }
+          )
+        })
   }
-
-
   return (
 
     <SafeAreaView>
@@ -383,28 +430,30 @@ const App = () => {
               />
             )}
           </TouchableOpacity>
-          <Button title="Cycle On And Off" onPress={() => toggleLed(ledStatus === 'ON' ? 'OFF' : 'ON')} />
+          <Button title="STOP" onPress={() => stopAll()} />
+          <Button title="Cycle On And Off" onPress={() => toggleLed(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on')} />
 
-          <Button title="qr code" onPress={() => { }} />
+          {/* <Button title="qr code" onPress={() => { }} /> */}
         </View>
       </View>
       <View>
         <TextInput
           style={styles.input}
-          onChangeText={onChangeText}
-          value={text}
-          placeholder='Full Cycle Time'
+          keyboardType='numeric'
+          onChangeText={(text) => {handleCycleChange(text)}}
+          // value={fullcycleValue}
+          placeholder='Fully Cycle Time'
         />
-        <Text style={{ margin: 12, }}>PARTIAL CYCLE TIME:</Text>
+        <Text style={{ margin: 12, }}>PARTIAL CYCLE TIME: {halfccycleValue}</Text>
         <TextInput
           style={styles.input}
-          onChangeText={onChangeText}
-          value={text}
-          placeholder='Full Cycle Time'
+          onChangeText={(text)=>{handlePumpChange(text)}}
+          keyboardType='numeric'
+          placeholder='PUMP ON TIME (Less than PCT)'
         />
 
       </View>
-      <Button title="ON AND OFF" onPress={() => { }} />
+      <Button title="Update new paramters" onPress={() => {updateCycleTime(fullcycleValue,pumpTime)}} />
       <View>
         <ScrollView style={{ margin: 10, maxHeight: 500, borderWidth: 0, padding: 10 }}>
           <Text>{outputText}</Text>
