@@ -12,6 +12,7 @@ import { BleManager, Characteristic, Device, State } from 'react-native-ble-plx'
 // import utf8 from 'utf8';
 import base64 from 'react-native-base64';
 import QRCodeScanner from 'react-native-qrcode-scanner';
+import { RNCamera } from 'react-native-camera';
 
 const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 const CHARACTERISTIC_UUID_TX = "db000752-8165-4eca-bcbd-8cad0f11127c"
@@ -36,8 +37,38 @@ const App = () => {
   const [fullcycleValue, setfullycycleValue] = useState(0);
   const [halfccycleValue, sethalfcycleValue] = useState(0);
   const [pumpTime, setPumpTime] = useState(0);
+  const [isScannerVisible, setIsScannerVisible] = useState(false);
+  const [cameraAuthorized, setCameraAuthorized] = useState(false);
 
   useEffect(() => {
+    const requestCameraPermission = async () => {
+      if (Platform.OS === 'android') {
+        try {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            {
+              title: 'Camera Permission',
+              message: 'This app needs access to your camera to scan QR codes.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            }
+          );
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            setCameraAuthorized(true);
+          } else {
+            console.log('Camera permission denied');
+          }
+        } catch (err) {
+          console.warn(err);
+        }
+      } else {
+        setCameraAuthorized(true);
+      }
+    };
+
+    requestCameraPermission();
+
 
     const subscription = bleManager.onStateChange(async state => {
 
@@ -115,6 +146,37 @@ const App = () => {
       console.log('Error scanning for devices', error);
     }
   };
+
+  const scanQrAndConnect = (qr:string) => {
+    try {
+      bleManager.startDeviceScan(null, null, (error, device) => {
+        console.log(device?.id);
+        if (error) {
+          console.log('error', error);
+          return;
+        }
+        if (device && device.id) {
+          setDevices((prevState) => {
+            if (!prevState.find((prevDevice) => prevDevice.id === device.id)) {
+              return [...prevState, device];
+            }
+            return prevState;
+          });
+
+          if (device.id === qr) {
+            console.log('Device found', device.name);
+            setConnectedDevice(device);
+            bleManager.stopDeviceScan();
+            connect(device);
+
+          }
+        }
+      });
+    } catch (error) {
+      console.log('Error scanning for devices', error);
+    }
+  };
+
 
 
   const connect = async (device: Device) => {
@@ -433,7 +495,7 @@ const handlePumpChange = (text: any) => {
           <Button title="STOP" onPress={() => stopAll()} />
           <Button title="Cycle On And Off" onPress={() => toggleLed(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on')} />
 
-          {/* <Button title="qr code" onPress={() => { }} /> */}
+          <Button title="qr code" onPress={() => setIsScannerVisible(true)} />
         </View>
       </View>
       <View>
@@ -459,17 +521,59 @@ const handlePumpChange = (text: any) => {
           <Text>{outputText}</Text>
         </ScrollView>
       </View>
+      {isScannerVisible && (
+        <View style={styles.scannerContainer}>
+          <QRCodeScanner
+            onRead={(e) => {
+              console.log('QR Code:', e.data);
+              scanQrAndConnect(e.data);
+              setIsScannerVisible(false);
+            }}
+            cameraStyle={styles.camera}
+          />
+          <Button title="Close Scanner" onPress={() => setIsScannerVisible(false)} />
+            </View> 
+      )}
     </SafeAreaView>
 
 
   );
 };
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  outputContainer: {
+    height: 200,
+    borderWidth: 1,
+    padding: 10,
+    marginVertical: 10,
+  },
   input: {
     height: 40,
     margin: 12,
     borderWidth: 1,
     padding: 10,
+  },
+  scannerContainer: {
+    position: 'relative',
+    height:"50%",
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  camera: {
+    position: 'relative',
+    top: 120,
+    width: "100%",
+    height: "50%",
   },
 });
 export default App;
