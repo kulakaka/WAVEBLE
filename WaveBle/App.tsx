@@ -12,8 +12,8 @@ import { BleManager, Characteristic, Device, State } from 'react-native-ble-plx'
 // import utf8 from 'utf8';
 import base64 from 'react-native-base64';
 import QRCodeScanner from 'react-native-qrcode-scanner';
+import Slider from '@react-native-community/slider';
 import { RNCamera } from 'react-native-camera';
-
 const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 const CHARACTERISTIC_UUID_TX = "db000752-8165-4eca-bcbd-8cad0f11127c"
 
@@ -39,6 +39,7 @@ const App = () => {
   const [pumpTime, setPumpTime] = useState(0);
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [cameraAuthorized, setCameraAuthorized] = useState(false);
+  const [sliderValue, setSliderValue] = useState(0);
 
   useEffect(() => {
     const requestCameraPermission = async () => {
@@ -365,7 +366,7 @@ const handlePumpChange = (text: any) => {
       console.log('No device connected');
       return;
     }
-
+    console.log('SolB Status:', status);
     bleManager.writeCharacteristicWithResponseForDevice(
       connectedDevice.id,
       SERVICE_UUID,
@@ -399,6 +400,7 @@ const handlePumpChange = (text: any) => {
       console.log('No device connected');
       return;
     }
+    console.log('SolC Status:', status);
     bleManager.writeCharacteristicWithResponseForDevice(
       connectedDevice.id,
       SERVICE_UUID,
@@ -423,7 +425,6 @@ const handlePumpChange = (text: any) => {
           }
         )
       })
-
     setSolCStatus(status);
   };
 
@@ -458,7 +459,43 @@ const handlePumpChange = (text: any) => {
             }
           )
         })
-  }
+  };
+
+  const handleSliderChange = (value: number) => {
+    setSliderValue(value);
+    console.log('Slider Value:', value);
+
+    if (!connectedDevice) {
+      console.log('No device connected');
+      return;
+    }
+    bleManager.writeCharacteristicWithResponseForDevice(
+      connectedDevice.id,
+      SERVICE_UUID,
+      CHARACTERISTIC_UUID_TX,
+      base64.encode(`pump_pwm;${value}`)
+    )
+      .then(() => {
+        bleManager.monitorCharacteristicForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          (error, characteristic) => {
+            if (error) {
+              console.log('Error monitoring characteristic', error);
+              return;
+            }
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            console.log('Pump PWM Status:', decodedValue);
+            setOutputText(prevText => `${prevText}\n${decodedValue}`)
+
+          }
+        )
+      })
+  };
+
+  
   return (
 
     <SafeAreaView>
@@ -468,8 +505,8 @@ const handlePumpChange = (text: any) => {
 
           <Button title="Pump" onPress={() => togglePump(pumpStatus === 'Pump_ON' ? 'Pump_OFF' : 'Pump_ON')} />
           <Button title="Sol A" onPress={() => toggleSolA(solAStatus === 'SolA_ON' ? 'SolA_OFF' : 'SolA_ON')} />
-          <Button title="Sol B" onPress={() => toggleSolB(solAStatus === 'SolB_ON' ? 'SolB_OFF' : 'SolB_ON')} />
-          <Button title="Sol c" onPress={() => toggleSolC(solAStatus === 'SolC_ON' ? 'SolC_OFF' : 'SolC_ON')} />
+          <Button title="Sol B" onPress={() => toggleSolB(solBStatus === 'solb_on' ? 'solb_off' : 'solb_on')} />
+          <Button title="Sol C" onPress={() => toggleSolC(solCStatus === 'solc_on' ? 'solc_off' : 'solc_on')} />
 
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-evenly' }}>
@@ -498,6 +535,7 @@ const handlePumpChange = (text: any) => {
           <Button title="qr code" onPress={() => setIsScannerVisible(true)} />
         </View>
       </View>
+      
       <View>
         <TextInput
           style={styles.input}
@@ -516,6 +554,18 @@ const handlePumpChange = (text: any) => {
 
       </View>
       <Button title="Update new paramters" onPress={() => {updateCycleTime(fullcycleValue,pumpTime)}} />
+        <Text style={{ margin:0 ,fontWeight:'bold' }}>PWM CONTROL PUMP:  {sliderValue}</Text>
+      <Slider
+        style={{width: "100%", height: 60}}
+        minimumValue={0}
+        maximumValue={255}
+        step={1}
+        value={0}
+        minimumTrackTintColor="#000000"
+        maximumTrackTintColor="#000000"
+        onValueChange={(value) => handleSliderChange(value)}
+      />
+
       <View>
         <ScrollView style={{ margin: 10, maxHeight: 500, borderWidth: 0, padding: 10 }}>
           <Text>{outputText}</Text>
@@ -523,6 +573,8 @@ const handlePumpChange = (text: any) => {
       </View>
       {isScannerVisible && (
         <View style={styles.scannerContainer}>
+          <Button title="Close Scanner" onPress={() => setIsScannerVisible(false)} />
+
           <QRCodeScanner
             onRead={(e) => {
               console.log('QR Code:', e.data);
@@ -531,7 +583,6 @@ const handlePumpChange = (text: any) => {
             }}
             cameraStyle={styles.camera}
           />
-          <Button title="Close Scanner" onPress={() => setIsScannerVisible(false)} />
             </View> 
       )}
     </SafeAreaView>
@@ -563,17 +614,15 @@ const styles = StyleSheet.create({
   },
   scannerContainer: {
     position: 'relative',
-    height:"50%",
-    width: '100%',
+    height:"100%",
+    width: "100%",
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0)',
   },
   camera: {
-    position: 'relative',
-    top: 120,
     width: "100%",
-    height: "50%",
+    height: "100%",
   },
 });
 export default App;
