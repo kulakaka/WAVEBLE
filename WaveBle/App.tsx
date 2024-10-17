@@ -40,7 +40,6 @@ const App = () => {
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [cameraAuthorized, setCameraAuthorized] = useState(false);
   const [sliderValue, setSliderValue] = useState(0);
-
   useEffect(() => {
     const requestCameraPermission = async () => {
       if (Platform.OS === 'android') {
@@ -191,10 +190,83 @@ const App = () => {
         setIsModealVisible(true);
         return device.discoverAllServicesAndCharacteristics();
       })
+      // .then(()=>{
+      //    // Start monitoring the characteristic after discovering services and characteristics
+      //   startMonitoringCharacteristic();
+      // })
+      .catch((error) => {
+        console.log('Connection error', error);
+      });
     return true;
 
   };
+// Function to start monitoring characteristic
+const startMonitoringCharacteristic = () => {
+  if (connectedDevice) {
+    bleManager.monitorCharacteristicForDevice(
+      connectedDevice.id,
+      SERVICE_UUID,
+      CHARACTERISTIC_UUID_TX,
+      (error, characteristic) => {
+        if (error) {
+          console.log('Error monitoring characteristic', error);
+          return;
+        }
+        const value = characteristic?.value;
+        const decodedValue = value ? base64.decode(value) : '';
+        console.log('Notification received:', decodedValue);
+        
+        // Update UI based on the received notification
+        handleNotification(decodedValue);
+      }
+    );
+  }
+};
 
+// Function to handle BLE notification and update UI accordingly
+const handleNotification = (decodedValue: string) => {
+  if (decodedValue === 'Solenoid A ON') {
+    console.log('Solenoid A ON');
+    setSolAStatus('sola_on');
+    setSolBStatus('solb_off');
+    setSolCStatus('solc_off');
+  }
+  if (decodedValue === 'Solenoid B ON') {
+    console.log('Solenoid B ON');
+    setSolAStatus('sola_off');
+    setSolBStatus('solb_on');
+    setSolCStatus('solc_off');
+  }
+  if (decodedValue === 'Solenoid C ON') {
+    console.log('Solenoid C ON');
+    setSolAStatus('sola_off');
+    setSolBStatus('solb_off');
+    setSolCStatus('solc_on');
+  }
+  if (decodedValue === 'Pump ON') {
+    console.log('Pump ON');
+    setPumpStatus('Pump_ON');
+  }
+  if (decodedValue === 'Pump OFF') {
+    console.log('Pump OFF');
+    setPumpStatus('Pump_OFF');
+  }
+  if (decodedValue === 'Cycle ON') {
+    setLedStatus('cycle_on');
+  }
+  if (decodedValue === 'Cycle OFF') {
+    setLedStatus('cycle_off');
+  }
+  if (decodedValue === 'holding') {
+    // setSolAStatus('sola_off');
+    // setSolBStatus('solb_off');
+    // setSolCStatus('solc_off');
+    setPumpStatus('Pump_OFF');
+  }
+  if (decodedValue !== 'Solenoid A ON' && decodedValue !== 'Solenoid B ON' && decodedValue !== 'Solenoid C ON' && decodedValue !== 'Pump ON' && decodedValue !== 'Pump OFF' && decodedValue !== 'Cycle ON' && decodedValue !== 'Cycle OFF' && decodedValue !== 'All Solenoids OFF') {
+    console.log('Unknown status:', decodedValue);
+  }
+};
   const DisconnectFromDevice = async () => {
     if (!connectedDevice) {
       console.log('No device currently connected');
@@ -220,40 +292,36 @@ const App = () => {
       setOutputText(prevText => `${prevText}\n${'No device connected'}`)
       return;
     }
-
-   
       bleManager.writeCharacteristicWithResponseForDevice(
         connectedDevice.id,
         SERVICE_UUID,
         CHARACTERISTIC_UUID_TX,
         base64.encode(status)
       )
-        .then(() => {
-          bleManager.monitorCharacteristicForDevice(
-            connectedDevice.id,
-            SERVICE_UUID,
-            CHARACTERISTIC_UUID_TX,
-            (error, characteristic) => {
-              if (error) {
-                console.log('Error monitoring characteristic', error);
-                return;
-              }
-              const value = characteristic?.value;
-              const decodedValue = value ? base64.decode(value) : '';
-              console.log('LED Status:', decodedValue);
-              setOutputText(prevText => `${prevText}\n${decodedValue}`)
-
+      .then(() => {
+        bleManager.monitorCharacteristicForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          (error, characteristic) => {
+            if (error) {
+              console.log('Error monitoring characteristic', error);
+              return;
             }
-          )
-        })
-    
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            handleNotification(decodedValue);
+          }
+        )
+      }
+      )
     setLedStatus(status);
   };
 
   
 const handleCycleChange = (text: any) => {
   setfullycycleValue(text);
-  const halfCycle = text / 2;
+  const halfCycle = text / 3;
   sethalfcycleValue(halfCycle);
 
 }
@@ -276,57 +344,11 @@ const handlePumpChange = (text: any) => {
       CHARACTERISTIC_UUID_TX,
       base64.encode(status)
     )
-      .then(() => {
-        bleManager.monitorCharacteristicForDevice(
-          connectedDevice.id,
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID_TX,
-          (error, characteristic) => {
-            if (error) {
-              console.log('Error monitoring characteristic', error);
-              return;
-            }
-            const value = characteristic?.value;
-            const decodedValue = value ? base64.decode(value) : '';
-            console.log('Pump Status:', decodedValue);
-            setOutputText(prevText => `${prevText}\n${decodedValue}`)
-
-          }
-        )
-      })
+     
     setPumpStatus(status);
   }
 
-  const stopAll = async () => {
-    if(!connectedDevice){
-      console.log('No device connected');
-      return;
-    }
-    bleManager.writeCharacteristicWithResponseForDevice(
-      connectedDevice.id,
-      SERVICE_UUID,
-      CHARACTERISTIC_UUID_TX,
-      base64.encode('stop')
-    )
-      .then(() => {
-        bleManager.monitorCharacteristicForDevice(
-          connectedDevice.id,
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID_TX,
-          (error, characteristic) => {
-            if (error) {
-              console.log('Error monitoring characteristic', error);
-              return;
-            }
-            const value = characteristic?.value;
-            const decodedValue = value ? base64.decode(value) : '';
-            console.log('Stop Status:', decodedValue);
-            setOutputText(prevText => `${prevText}\n${decodedValue}`)
 
-          }
-        )
-      })  
-  };
 
   const toggleSolA = async (status: string) => {
     if (!connectedDevice) {
@@ -340,24 +362,7 @@ const handlePumpChange = (text: any) => {
       CHARACTERISTIC_UUID_TX,
       base64.encode(status)
     )
-      .then(() => {
-        bleManager.monitorCharacteristicForDevice(
-          connectedDevice.id,
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID_TX,
-          (error, characteristic) => {
-            if (error) {
-              console.log('Error monitoring characteristic', error);
-              return;
-            }
-            const value = characteristic?.value;
-            const decodedValue = value ? base64.decode(value) : '';
-            console.log('SolA Status:', decodedValue);
-            setOutputText(prevText => `${prevText}\n${decodedValue}`)
-
-          }
-        )
-      })
+    
     setSolAStatus(status);
   };
 
@@ -373,24 +378,7 @@ const handlePumpChange = (text: any) => {
       CHARACTERISTIC_UUID_TX,
       base64.encode(status)
     )
-      .then(() => {
-        bleManager.monitorCharacteristicForDevice(
-          connectedDevice.id,
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID_TX,
-          (error, characteristic) => {
-            if (error) {
-              console.log('Error monitoring characteristic', error);
-              return;
-            }
-            const value = characteristic?.value;
-            const decodedValue = value ? base64.decode(value) : '';
-            console.log('SolB Status:', decodedValue);
-            setOutputText(prevText => `${prevText}\n${decodedValue}`)
-
-          }
-        )
-      })
+     
     setSolBStatus(status);
 
   };
@@ -430,9 +418,16 @@ const handlePumpChange = (text: any) => {
 
   const updateCycleTime = (fullcycleValue:number,pumpTime:number)=>{
      if (!connectedDevice) {
-      console.log('No device connected');
+      console.log('No devics connected');
       return;
      }
+
+     if (fullcycleValue >= 1800000 || pumpTime >= 30000) {
+      console.log('Invalid time values');
+      Alert.alert('Invalid time values');
+      return;
+    }
+
      const timeMessage = `set_times;${fullcycleValue};${pumpTime}`;
      console.log('Time Message:', timeMessage);
       bleManager.writeCharacteristicWithResponseForDevice(
@@ -441,24 +436,23 @@ const handlePumpChange = (text: any) => {
           CHARACTERISTIC_UUID_TX,
           base64.encode(timeMessage)
         )
-        .then(() => {
-          bleManager.monitorCharacteristicForDevice(
-            connectedDevice.id,
-            SERVICE_UUID,
-            CHARACTERISTIC_UUID_TX,
-            (error, characteristic) => {
-              if (error) {
-                console.log('Error monitoring characteristic', error);
-                return;
-              }
-              const value = characteristic?.value;
-              const decodedValue = value ? base64.decode(value) : '';
-              console.log('Cycle Time Status:', decodedValue);
-              setOutputText(prevText => `${prevText}\n${decodedValue}`)
-
+      .then(() => {
+        bleManager.monitorCharacteristicForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          (error, characteristic) => {
+            if (error) {
+              console.log('Error monitoring characteristic', error);
+              return;
             }
-          )
-        })
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            handleNotification(decodedValue);
+          }
+        )
+      } )
+  
   };
 
   const handleSliderChange = (value: number) => {
@@ -475,27 +469,11 @@ const handlePumpChange = (text: any) => {
       CHARACTERISTIC_UUID_TX,
       base64.encode(`pump_pwm;${value}`)
     )
-      .then(() => {
-        bleManager.monitorCharacteristicForDevice(
-          connectedDevice.id,
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID_TX,
-          (error, characteristic) => {
-            if (error) {
-              console.log('Error monitoring characteristic', error);
-              return;
-            }
-            const value = characteristic?.value;
-            const decodedValue = value ? base64.decode(value) : '';
-            console.log('Pump PWM Status:', decodedValue);
-            setOutputText(prevText => `${prevText}\n${decodedValue}`)
-
-          }
-        )
-      })
+ 
   };
 
-  
+
+
   return (
 
     <SafeAreaView>
@@ -503,10 +481,35 @@ const handlePumpChange = (text: any) => {
       <View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', marginBottom: 10, marginTop: 20 }}>
 
-          <Button title="Pump" onPress={() => togglePump(pumpStatus === 'Pump_ON' ? 'Pump_OFF' : 'Pump_ON')} />
-          <Button title="Sol A" onPress={() => toggleSolA(solAStatus === 'SolA_ON' ? 'SolA_OFF' : 'SolA_ON')} />
-          <Button title="Sol B" onPress={() => toggleSolB(solBStatus === 'solb_on' ? 'solb_off' : 'solb_on')} />
-          <Button title="Sol C" onPress={() => toggleSolC(solCStatus === 'solc_on' ? 'solc_off' : 'solc_on')} />
+          {/* <Button title="Pump" onPress={() => togglePump(pumpStatus === 'Pump_ON' ? 'Pump_OFF' : 'Pump_ON')} /> */}
+          <TouchableOpacity
+            onPress={() => togglePump(pumpStatus === 'Pump_ON' ? 'Pump_OFF' : 'Pump_ON')}
+            style={{ width:80,backgroundColor: pumpStatus === 'Pump_ON' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+          > 
+          <Text style={{ color: 'white', textAlign: 'center' }}>Pump Control</Text>
+          </TouchableOpacity>
+          {/* <Button title="Sol A" onPress={() => toggleSolA(solAStatus === 'SolA_ON' ? 'SolA_OFF' : 'SolA_ON')} />
+           */}
+          <TouchableOpacity
+            onPress={() => toggleSolA(solAStatus === 'sola_on' ? 'sola_off' : 'sola_on')}
+            style={{ width:80,backgroundColor: solAStatus === 'sola_on' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+          >
+            <Text style={{ color: 'white', textAlign: 'center' }}>Sol A Control</Text>
+          </TouchableOpacity>
+          {/* <Button title="Sol B" onPress={() => toggleSolB(solBStatus === 'solb_on' ? 'solb_off' : 'solb_on')} /> */}
+          <TouchableOpacity
+            onPress={() => toggleSolB(solBStatus === 'solb_on' ? 'solb_off' : 'solb_on')}
+            style={{ width:80,backgroundColor: solBStatus === 'solb_on' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+          >
+            <Text style={{ color: 'white', textAlign: 'center' }}>Sol B Control</Text>
+          </TouchableOpacity>
+          {/* <Button title="Sol C" onPress={() => toggleSolC(solCStatus === 'solc_on' ? 'solc_off' : 'solc_on')} /> */}
+          <TouchableOpacity
+            onPress={() => toggleSolC(solCStatus === 'solc_on' ? 'solc_off' : 'solc_on')}
+            style={{ width:80,backgroundColor: solCStatus === 'solc_on' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+          >
+            <Text style={{ color: 'white', textAlign: 'center' }}>Sol C Control</Text>
+          </TouchableOpacity>
 
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-evenly' }}>
@@ -529,7 +532,6 @@ const handlePumpChange = (text: any) => {
               />
             )}
           </TouchableOpacity>
-          <Button title="STOP" onPress={() => stopAll()} />
           <Button title="Cycle On And Off" onPress={() => toggleLed(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on')} />
 
           <Button title="qr code" onPress={() => setIsScannerVisible(true)} />
@@ -542,18 +544,19 @@ const handlePumpChange = (text: any) => {
           keyboardType='numeric'
           onChangeText={(text) => {handleCycleChange(text)}}
           // value={fullcycleValue}
-          placeholder='Fully Cycle Time'
+          placeholder='Fully Cycle Time (Seconds)'
         />
         <Text style={{ margin: 12, }}>PARTIAL CYCLE TIME: {halfccycleValue}</Text>
         <TextInput
           style={styles.input}
           onChangeText={(text)=>{handlePumpChange(text)}}
           keyboardType='numeric'
-          placeholder='PUMP ON TIME (Less than PCT)'
+          placeholder='PUMP ON TIME (Less than PCT) (Seconds)'
         />
 
       </View>
-      <Button title="Update new paramters" onPress={() => {updateCycleTime(fullcycleValue,pumpTime)}} />
+      <Button title="Update new paramters" onPress={() => {updateCycleTime(fullcycleValue*1000,pumpTime*1000)}} />
+    
         <Text style={{ margin:0 ,fontWeight:'bold' }}>PWM CONTROL PUMP:  {sliderValue}</Text>
       <Slider
         style={{width: "100%", height: 60}}
@@ -566,11 +569,11 @@ const handlePumpChange = (text: any) => {
         onValueChange={(value) => handleSliderChange(value)}
       />
 
-      <View>
+      {/* <View>
         <ScrollView style={{ margin: 10, maxHeight: 500, borderWidth: 0, padding: 10 }}>
           <Text>{outputText}</Text>
         </ScrollView>
-      </View>
+      </View> */}
       {isScannerVisible && (
         <View style={styles.scannerContainer}>
           <Button title="Close Scanner" onPress={() => setIsScannerVisible(false)} />
