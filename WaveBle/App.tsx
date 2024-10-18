@@ -6,7 +6,7 @@ import {
   Platform, Alert,
   SafeAreaView, ScrollView,
   TouchableOpacity, TextInput,
-  StyleSheet
+  StyleSheet,Image
 } from 'react-native';
 import { BleManager, Characteristic, Device, State } from 'react-native-ble-plx';
 // import utf8 from 'utf8';
@@ -26,11 +26,11 @@ const App = () => {
   //Is a device connected?
   const [isConnected, setIsConnected] = useState(false);
   const [isModealVisible, setIsModealVisible] = useState(false);
-  const [ledStatus, setLedStatus] = useState('OFF');
-  const [pumpStatus, setPumpStatus] = useState('OFF');
-  const [solAStatus, setSolAStatus] = useState('OFF');
-  const [solBStatus, setSolBStatus] = useState('OFF');
-  const [solCStatus, setSolCStatus] = useState('OFF');
+  const [ledStatus, setLedStatus] = useState('cycle_off');
+  const [pumpStatus, setPumpStatus] = useState('Pump_OFF');
+  const [solAStatus, setSolAStatus] = useState('sola_off');
+  const [solBStatus, setSolBStatus] = useState('solb_off');
+  const [solCStatus, setSolCStatus] = useState('solc_off');
 
   const [text, onChangeText] = React.useState("");
   const [outputText, setOutputText] = useState('Output will be displayed here...');
@@ -39,7 +39,8 @@ const App = () => {
   const [pumpTime, setPumpTime] = useState(0);
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [cameraAuthorized, setCameraAuthorized] = useState(false);
-  const [sliderValue, setSliderValue] = useState(0);
+  const [sliderValue, setSliderValue] = useState(255);
+  const [isConnecting, setIsConnecting] = useState(false);
   useEffect(() => {
     const requestCameraPermission = async () => {
       if (Platform.OS === 'android') {
@@ -204,12 +205,13 @@ const App = () => {
 const startMonitoringCharacteristic = () => {
   if (connectedDevice) {
     bleManager.monitorCharacteristicForDevice(
-      connectedDevice.id,
+      connectedDevice.id, 
       SERVICE_UUID,
       CHARACTERISTIC_UUID_TX,
       (error, characteristic) => {
         if (error) {
           console.log('Error monitoring characteristic', error);
+          Alert.alert("error monitoring characteristic");
           return;
         }
         const value = characteristic?.value;
@@ -225,42 +227,42 @@ const startMonitoringCharacteristic = () => {
 
 // Function to handle BLE notification and update UI accordingly
 const handleNotification = (decodedValue: string) => {
+  console.log('Notification received:', decodedValue);
   if (decodedValue === 'Solenoid A ON') {
-    console.log('Solenoid A ON');
     setSolAStatus('sola_on');
     setSolBStatus('solb_off');
     setSolCStatus('solc_off');
   }
   if (decodedValue === 'Solenoid B ON') {
-    console.log('Solenoid B ON');
     setSolAStatus('sola_off');
     setSolBStatus('solb_on');
     setSolCStatus('solc_off');
   }
   if (decodedValue === 'Solenoid C ON') {
-    console.log('Solenoid C ON');
     setSolAStatus('sola_off');
     setSolBStatus('solb_off');
     setSolCStatus('solc_on');
   }
   if (decodedValue === 'Pump ON') {
-    console.log('Pump ON');
     setPumpStatus('Pump_ON');
   }
   if (decodedValue === 'Pump OFF') {
-    console.log('Pump OFF');
     setPumpStatus('Pump_OFF');
   }
   if (decodedValue === 'Cycle ON') {
     setLedStatus('cycle_on');
+    // setSolAStatus('sola_on');
+    // setPumpStatus('Pump_ON');
+
   }
   if (decodedValue === 'Cycle OFF') {
     setLedStatus('cycle_off');
+    setSolAStatus('sola_off');
+    setSolBStatus('solb_off');
+    setSolCStatus('solc_off');
+    setPumpStatus('Pump_OFF');
   }
   if (decodedValue === 'holding') {
-    // setSolAStatus('sola_off');
-    // setSolBStatus('solb_off');
-    // setSolCStatus('solc_off');
     setPumpStatus('Pump_OFF');
   }
   if (decodedValue !== 'Solenoid A ON' && decodedValue !== 'Solenoid B ON' && decodedValue !== 'Solenoid C ON' && decodedValue !== 'Pump ON' && decodedValue !== 'Pump OFF' && decodedValue !== 'Cycle ON' && decodedValue !== 'Cycle OFF' && decodedValue !== 'All Solenoids OFF') {
@@ -280,7 +282,12 @@ const handleNotification = (decodedValue: string) => {
       await bleManager.cancelDeviceConnection(connectedDevice.id);
       setIsConnected(false);
       setConnectedDevice(null);
+      setSolAStatus('sola_off');
+      setSolBStatus('solb_off');
+      setSolCStatus('solc_off');
+      setPumpStatus('Pump_OFF');
       console.log('Disconnected from device', connectedDevice.name);
+      setIsConnecting(false);
     } catch (error) {
       console.log('Error disconnecting from device', error);
     }
@@ -289,8 +296,13 @@ const handleNotification = (decodedValue: string) => {
   const toggleLed = async (status: string) => {
     if (!connectedDevice) {
       console.log('No device connected');
+      Alert.alert('No device connected');
       setOutputText(prevText => `${prevText}\n${'No device connected'}`)
       return;
+    }
+    if (status === 'cycle_on') {
+      setPumpStatus('Pump_ON');
+      setSolAStatus('sola_on');
     }
       bleManager.writeCharacteristicWithResponseForDevice(
         connectedDevice.id,
@@ -306,6 +318,7 @@ const handleNotification = (decodedValue: string) => {
           (error, characteristic) => {
             if (error) {
               console.log('Error monitoring characteristic', error);
+              Alert.alert('Error monitoring characteristic'); 
               return;
             }
             const value = characteristic?.value;
@@ -335,6 +348,8 @@ const handlePumpChange = (text: any) => {
 
     if (!connectedDevice) {
       console.log('No device connected');
+      Alert.alert('No device connected');
+
       return;
     }
 
@@ -353,6 +368,8 @@ const handlePumpChange = (text: any) => {
   const toggleSolA = async (status: string) => {
     if (!connectedDevice) {
       console.log('No device connected');
+      Alert.alert('No device connected');
+
       return;
     }
 
@@ -369,6 +386,8 @@ const handlePumpChange = (text: any) => {
   const toggleSolB = async (status: string) => {
     if (!connectedDevice) {
       console.log('No device connected');
+      Alert.alert('No device connected');
+
       return;
     }
     console.log('SolB Status:', status);
@@ -386,6 +405,8 @@ const handlePumpChange = (text: any) => {
   const toggleSolC = async (status: string) => {
     if (!connectedDevice) {
       console.log('No device connected');
+      Alert.alert('No device connected');
+
       return;
     }
     console.log('SolC Status:', status);
@@ -403,6 +424,7 @@ const handlePumpChange = (text: any) => {
           (error, characteristic) => {
             if (error) {
               console.log('Error monitoring characteristic', error);
+              Alert.alert('Error monitoring characteristic');
               return;
             }
             const value = characteristic?.value;
@@ -419,15 +441,18 @@ const handlePumpChange = (text: any) => {
   const updateCycleTime = (fullcycleValue:number,pumpTime:number)=>{
      if (!connectedDevice) {
       console.log('No devics connected');
+      Alert.alert('No device connected');
+
       return;
      }
 
      if (fullcycleValue >= 1800000 || pumpTime >= 30000) {
       console.log('Invalid time values');
-      Alert.alert('Invalid time values');
+      Alert.alert('FCT must be less than 30 minutes and PCT must be less than 30 seconds');
       return;
     }
-
+    setSolAStatus('sola_on');
+    setPumpStatus('Pump_ON');
      const timeMessage = `set_times;${fullcycleValue};${pumpTime}`;
      console.log('Time Message:', timeMessage);
       bleManager.writeCharacteristicWithResponseForDevice(
@@ -437,6 +462,7 @@ const handlePumpChange = (text: any) => {
           base64.encode(timeMessage)
         )
       .then(() => {
+
         bleManager.monitorCharacteristicForDevice(
           connectedDevice.id,
           SERVICE_UUID,
@@ -451,6 +477,8 @@ const handlePumpChange = (text: any) => {
             handleNotification(decodedValue);
           }
         )
+
+        Alert.alert('Cycle time updated successfully');
       } )
   
   };
@@ -477,19 +505,23 @@ const handlePumpChange = (text: any) => {
   return (
 
     <SafeAreaView>
-      <Text style={{ fontSize: 20, textAlign: 'center', fontWeight: 'bold' }}>Wave Therapeutics BLE TEST App</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', padding: 10 }}>
+        <Image
+          source={require('./imgs/widelogo2.png')}
+          style={{ width: '80%', height: 100, resizeMode: 'contain' }}
+        />
+      </View>
+      <Text style={{ fontSize: 20, textAlign: 'center', fontWeight: 'bold' }}>Wheelchair Cushion Controller</Text>
       <View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', marginBottom: 10, marginTop: 20 }}>
 
-          {/* <Button title="Pump" onPress={() => togglePump(pumpStatus === 'Pump_ON' ? 'Pump_OFF' : 'Pump_ON')} /> */}
           <TouchableOpacity
             onPress={() => togglePump(pumpStatus === 'Pump_ON' ? 'Pump_OFF' : 'Pump_ON')}
             style={{ width:80,backgroundColor: pumpStatus === 'Pump_ON' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
           > 
           <Text style={{ color: 'white', textAlign: 'center' }}>Pump Control</Text>
           </TouchableOpacity>
-          {/* <Button title="Sol A" onPress={() => toggleSolA(solAStatus === 'SolA_ON' ? 'SolA_OFF' : 'SolA_ON')} />
-           */}
+        
           <TouchableOpacity
             onPress={() => toggleSolA(solAStatus === 'sola_on' ? 'sola_off' : 'sola_on')}
             style={{ width:80,backgroundColor: solAStatus === 'sola_on' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
@@ -513,46 +545,79 @@ const handlePumpChange = (text: any) => {
 
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-evenly' }}>
-          <TouchableOpacity style={{ width: 120 }}>
+            <TouchableOpacity style={{ width: 120 }}>
             {!isConnected ? (
-              <Button
-                title="Connect ble"
-                onPress={() => {
-                  scanAndConnect();
-                }}
-                disabled={false}
-              />
+              <TouchableOpacity
+              onPress={() => {
+                setIsConnecting(true);
+                scanAndConnect();
+              }}
+              disabled={isConnecting}
+              style={{
+                backgroundColor: isConnecting ? 'gray' : 'blue',
+                padding: 10,
+                borderRadius: 10,
+                alignItems: 'center',
+              }}
+              >
+              <Text style={{ color: 'white' }}>
+                {isConnecting ? "Connecting..." : "Connect BLE"}
+              </Text>
+              </TouchableOpacity>
             ) : (
-              <Button
-                title="Disonnect"
-                onPress={() => {
-                  DisconnectFromDevice();
-                }}
-                disabled={false}
-              />
+              <TouchableOpacity
+              onPress={() => {
+                DisconnectFromDevice();
+              }}
+              style={{
+                backgroundColor: 'blue',
+                padding: 10,
+                borderRadius: 10,
+                alignItems: 'center',
+              }}
+              >
+              <Text style={{ color: 'white' }}>Disconnect</Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
-          <Button title="Cycle On And Off" onPress={() => toggleLed(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on')} />
+            </TouchableOpacity>
 
-          <Button title="qr code" onPress={() => setIsScannerVisible(true)} />
+            <TouchableOpacity
+            onPress={() => toggleLed(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on')}
+            style={{ width:140,backgroundColor: ledStatus === 'cycle_on' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+          >
+            <Text style={{ color: 'white', textAlign: 'center' }}>Cycle On And Off</Text>
+          </TouchableOpacity>
+
+            {/* <Button title="qr code" onPress={() => setIsScannerVisible(true)} /> */}
+            <TouchableOpacity
+            onPress={() => setIsScannerVisible(true)}
+            style={{ width:80,backgroundColor: 'blue', padding: 10, borderRadius: 10, }}
+            >
+            <Text style={{ color: 'white', textAlign: 'center' }}>QR Code</Text>
+            </TouchableOpacity>
         </View>
       </View>
       
       <View>
-        <TextInput
-          style={styles.input}
-          keyboardType='numeric'
-          onChangeText={(text) => {handleCycleChange(text)}}
-          // value={fullcycleValue}
-          placeholder='Fully Cycle Time (Seconds)'
-        />
-        <Text style={{ margin: 12, }}>PARTIAL CYCLE TIME: {halfccycleValue}</Text>
-        <TextInput
-          style={styles.input}
-          onChangeText={(text)=>{handlePumpChange(text)}}
-          keyboardType='numeric'
-          placeholder='PUMP ON TIME (Less than PCT) (Seconds)'
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ margin: 2 }}>FULL CYCLE TIME in second:</Text>
+          <TextInput
+            style={[styles.input, { flex: 1, marginLeft: 10 }]}
+            keyboardType='numeric'
+            onChangeText={(text) => { handleCycleChange(text) }}
+            placeholder=''
+          />
+        </View>
+        <Text style={{ margin: 0, }}>PARTIAL CYCLE TIME in second: {halfccycleValue}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ margin: 2 }}>PUMP ON TIME in second:</Text>
+          <TextInput
+            style={[styles.input, { flex: 1, marginLeft: 10 }]}
+            keyboardType='numeric'
+            onChangeText={(text) => { handlePumpChange(text) }}
+            placeholder=''
+          />
+        </View>
 
       </View>
       <Button title="Update new paramters" onPress={() => {updateCycleTime(fullcycleValue*1000,pumpTime*1000)}} />
@@ -563,7 +628,7 @@ const handlePumpChange = (text: any) => {
         minimumValue={0}
         maximumValue={255}
         step={1}
-        value={0}
+        value={255}
         minimumTrackTintColor="#000000"
         maximumTrackTintColor="#000000"
         onValueChange={(value) => handleSliderChange(value)}
