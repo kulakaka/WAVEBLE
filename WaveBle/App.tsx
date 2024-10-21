@@ -28,9 +28,9 @@ const App = () => {
   const [isModealVisible, setIsModealVisible] = useState(false);
   const [ledStatus, setLedStatus] = useState('cycle_off');
   const [pumpStatus, setPumpStatus] = useState('Pump_OFF');
-  const [solAStatus, setSolAStatus] = useState('sola_off');
-  const [solBStatus, setSolBStatus] = useState('solb_off');
-  const [solCStatus, setSolCStatus] = useState('solc_off');
+  const [solAStatus, setSolAStatus] = useState('sola_on');
+  const [solBStatus, setSolBStatus] = useState('solb_on');
+  const [solCStatus, setSolCStatus] = useState('solc_on');
 
   const [text, onChangeText] = React.useState("");
   const [outputText, setOutputText] = useState('Output will be displayed here...');
@@ -230,18 +230,27 @@ const handleNotification = (decodedValue: string) => {
   console.log('Notification received:', decodedValue);
   if (decodedValue === 'Solenoid A ON') {
     setSolAStatus('sola_on');
-    setSolBStatus('solb_off');
-    setSolCStatus('solc_off');
+    // setSolBStatus('solb_off');
+    // setSolCStatus('solc_off');
   }
   if (decodedValue === 'Solenoid B ON') {
-    setSolAStatus('sola_off');
+    // setSolAStatus('sola_off');
     setSolBStatus('solb_on');
-    setSolCStatus('solc_off');
+    // setSolCStatus('solc_off');
   }
   if (decodedValue === 'Solenoid C ON') {
-    setSolAStatus('sola_off');
-    setSolBStatus('solb_off');
+    // setSolAStatus('sola_off');
+    // setSolBStatus('solb_off');
     setSolCStatus('solc_on');
+  }
+  if (decodedValue === 'Solenoid A OFF') {
+    setSolAStatus('sola_off');
+  }
+  if (decodedValue === 'Solenoid B OFF') {
+    setSolBStatus('solb_off');
+  }
+  if (decodedValue === 'Solenoid C OFF') {
+    setSolCStatus('solc_off');
   }
   if (decodedValue === 'Pump ON') {
     setPumpStatus('Pump_ON');
@@ -257,14 +266,25 @@ const handleNotification = (decodedValue: string) => {
   }
   if (decodedValue === 'Cycle OFF') {
     setLedStatus('cycle_off');
-    setSolAStatus('sola_off');
-    setSolBStatus('solb_off');
-    setSolCStatus('solc_off');
+    // setSolAStatus('sola_off');
+    // setSolBStatus('solb_off');
+    // setSolCStatus('solc_off');
+    setSolAStatus('sola_on');
+    setSolBStatus('solb_on');
+    setSolCStatus('solc_on');
     setPumpStatus('Pump_OFF');
   }
-  if (decodedValue === 'holding') {
-    setPumpStatus('Pump_OFF');
+  if (decodedValue === 'setupFinished') {
+    setSolAStatus('sola_on');
+    setSolBStatus('solb_on');
+    setSolCStatus('solc_on');
   }
+  if (decodedValue === 'deenergies all') {
+    setSolAStatus('sola_on');
+    setSolBStatus('solb_on');
+    setSolCStatus('solc_on');
+  }
+
   if (decodedValue !== 'Solenoid A ON' && decodedValue !== 'Solenoid B ON' && decodedValue !== 'Solenoid C ON' && decodedValue !== 'Pump ON' && decodedValue !== 'Pump OFF' && decodedValue !== 'Cycle ON' && decodedValue !== 'Cycle OFF' && decodedValue !== 'All Solenoids OFF') {
     console.log('Unknown status:', decodedValue);
   }
@@ -302,7 +322,15 @@ const handleNotification = (decodedValue: string) => {
     }
     if (status === 'cycle_on') {
       setPumpStatus('Pump_ON');
-      setSolAStatus('sola_on');
+      setSolBStatus('solb_off');
+      setSolCStatus('solc_off');
+      setfullycycleValue(360);
+      setPumpTime(30);
+    }
+    else
+    {
+      setfullycycleValue(0);
+      setPumpTime(0);
     }
       bleManager.writeCharacteristicWithResponseForDevice(
         connectedDevice.id,
@@ -451,8 +479,10 @@ const handlePumpChange = (text: any) => {
       Alert.alert('FCT must be less than 30 minutes and PCT must be less than 30 seconds');
       return;
     }
-    setSolAStatus('sola_on');
+    // setSolAStatus('sola_on');
     setPumpStatus('Pump_ON');
+    setSolBStatus('solb_off');
+    setSolCStatus('solc_off');
      const timeMessage = `set_times;${fullcycleValue};${pumpTime}`;
      console.log('Time Message:', timeMessage);
       bleManager.writeCharacteristicWithResponseForDevice(
@@ -504,7 +534,7 @@ const handlePumpChange = (text: any) => {
 
   return (
 
-    <SafeAreaView>
+    <SafeAreaView style={styles.safeArea}>
       <View style={{ flexDirection: 'row', justifyContent: 'center', padding: 10 }}>
         <Image
           source={require('./imgs/widelogo2.png')}
@@ -515,32 +545,40 @@ const handlePumpChange = (text: any) => {
       <View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', marginBottom: 10, marginTop: 20 }}>
 
-          <TouchableOpacity
+            <TouchableOpacity
             onPress={() => togglePump(pumpStatus === 'Pump_ON' ? 'Pump_OFF' : 'Pump_ON')}
             style={{ width:80,backgroundColor: pumpStatus === 'Pump_ON' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
-          > 
-          <Text style={{ color: 'white', textAlign: 'center' }}>Pump Control</Text>
-          </TouchableOpacity>
+            > 
+            <Text style={{ color: 'white', textAlign: 'center' }}>
+            {pumpStatus === 'Pump_ON' ? 'Pump ON' : 'Pump OFF'}
+            </Text>
+            </TouchableOpacity>
         
           <TouchableOpacity
             onPress={() => toggleSolA(solAStatus === 'sola_on' ? 'sola_off' : 'sola_on')}
-            style={{ width:80,backgroundColor: solAStatus === 'sola_on' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+            style={{ width:80,backgroundColor: solAStatus === 'sola_off' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
           >
-            <Text style={{ color: 'white', textAlign: 'center' }}>Sol A Control</Text>
+            <Text style={{ color: 'white', textAlign: 'center' }}>
+            {solAStatus === 'sola_off' ? 'Zone A Ambient' : 'Zone A Vacuum'}
+            </Text>
           </TouchableOpacity>
           {/* <Button title="Sol B" onPress={() => toggleSolB(solBStatus === 'solb_on' ? 'solb_off' : 'solb_on')} /> */}
           <TouchableOpacity
             onPress={() => toggleSolB(solBStatus === 'solb_on' ? 'solb_off' : 'solb_on')}
-            style={{ width:80,backgroundColor: solBStatus === 'solb_on' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+            style={{ width:80,backgroundColor: solBStatus === 'solb_off' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
           >
-            <Text style={{ color: 'white', textAlign: 'center' }}>Sol B Control</Text>
+             <Text style={{ color: 'white', textAlign: 'center' }}>
+            {solBStatus === 'solb_off' ? 'Zone B Ambient' : 'Zone B Vacuum'}
+            </Text>
           </TouchableOpacity>
           {/* <Button title="Sol C" onPress={() => toggleSolC(solCStatus === 'solc_on' ? 'solc_off' : 'solc_on')} /> */}
           <TouchableOpacity
             onPress={() => toggleSolC(solCStatus === 'solc_on' ? 'solc_off' : 'solc_on')}
-            style={{ width:80,backgroundColor: solCStatus === 'solc_on' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+            style={{ width:80,backgroundColor: solCStatus === 'solc_off' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
           >
-            <Text style={{ color: 'white', textAlign: 'center' }}>Sol C Control</Text>
+           <Text style={{ color: 'white', textAlign: 'center' }}>
+            {solCStatus === 'solc_off' ? 'Zone C Ambient' : 'Zone C Vacuum'}
+            </Text>
           </TouchableOpacity>
 
         </View>
@@ -585,7 +623,9 @@ const handlePumpChange = (text: any) => {
             onPress={() => toggleLed(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on')}
             style={{ width:140,backgroundColor: ledStatus === 'cycle_on' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
           >
-            <Text style={{ color: 'white', textAlign: 'center' }}>Cycle On And Off</Text>
+            <Text style={{ color: 'white', textAlign: 'center' }}>
+            {ledStatus === 'cycle_off' ? 'Cycle OFF' : 'Cycle ON'}
+            </Text>
           </TouchableOpacity>
 
             {/* <Button title="qr code" onPress={() => setIsScannerVisible(true)} /> */}
@@ -599,28 +639,33 @@ const handlePumpChange = (text: any) => {
       </View>
       
       <View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ margin: 2 }}>FULL CYCLE TIME in second:</Text>
+        <View style={{ flexDirection: 'row',alignItems: 'center'}}>
+          <Text style={{ margin: 2,width:300,fontSize:20}}>FULL CYCLE TIME in second:</Text>
           <TextInput
             style={[styles.input, { flex: 1, marginLeft: 10 }]}
             keyboardType='numeric'
             onChangeText={(text) => { handleCycleChange(text) }}
             placeholder=''
+            value={fullcycleValue.toString()}
           />
         </View>
-        <Text style={{ margin: 0, }}>PARTIAL CYCLE TIME in second: {halfccycleValue}</Text>
+        <Text style={{ margin: 0,fontSize:20 }}>PARTIAL CYCLE TIME in second: {halfccycleValue}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ margin: 2 }}>PUMP ON TIME in second:</Text>
+          <Text style={{ margin: 2 ,width:300,fontSize:20}}>PUMP ON TIME in second:</Text>
           <TextInput
             style={[styles.input, { flex: 1, marginLeft: 10 }]}
             keyboardType='numeric'
             onChangeText={(text) => { handlePumpChange(text) }}
             placeholder=''
+            value={pumpTime.toString()}
+            
           />
         </View>
 
       </View>
-      <Button title="Update new paramters" onPress={() => {updateCycleTime(fullcycleValue*1000,pumpTime*1000)}} />
+      {!isScannerVisible && (
+        <Button title="Update new paramters" onPress={() => {updateCycleTime(fullcycleValue*1000,pumpTime*1000)}} />
+      )}
     
         <Text style={{ margin:0 ,fontWeight:'bold' }}>PWM CONTROL PUMP:  {sliderValue}</Text>
       <Slider
@@ -640,18 +685,25 @@ const handlePumpChange = (text: any) => {
         </ScrollView>
       </View> */}
       {isScannerVisible && (
-        <View style={styles.scannerContainer}>
-          <Button title="Close Scanner" onPress={() => setIsScannerVisible(false)} />
-
-          <QRCodeScanner
-            onRead={(e) => {
-              console.log('QR Code:', e.data);
-              scanQrAndConnect(e.data);
-              setIsScannerVisible(false);
-            }}
-            cameraStyle={styles.camera}
-          />
-            </View> 
+        <View style={styles.scannerOverlay}>
+          <View style={styles.scannerContainer}>
+            <QRCodeScanner
+              onRead={(e) => {
+                console.log('QR Code:', e.data);
+                scanQrAndConnect(e.data);
+                setIsScannerVisible(false);
+              }}
+              cameraStyle={styles.camera}
+              // containerStyle={styles.cameraContainer}
+            />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setIsScannerVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close Scanner</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
     </SafeAreaView>
 
@@ -681,18 +733,51 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   scannerContainer: {
+    flex: 1,
+    width: '80%',
+    aspectRatio: 1,
+    overflow: 'hidden',
+    borderRadius: 20,
     position: 'relative',
     height:"100%",
-    width: "100%",
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0)',
   },
   camera: {
+    flex: 1,
     width: "100%",
     height: "100%",
   },
+  safeArea: {
+    flex: 1,
+  },
+  scannerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  closeButton: {
+    position: 'absolute',
+    bottom: 20,
+    alignSelf: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    color: 'black',
+    fontWeight: 'bold',
+  },
 });
 export default App;
+
 
 
