@@ -547,7 +547,14 @@ const handlePumpChange = (text: any) => {
 
             <TouchableOpacity
             onPress={() => togglePump(pumpStatus === 'Pump_ON' ? 'Pump_OFF' : 'Pump_ON')}
-            style={{ width:80,backgroundColor: pumpStatus === 'Pump_ON' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+            style={{ 
+              width: 80,
+              backgroundColor: !isConnected ? '#808080' : (pumpStatus === 'Pump_ON' ? '#008080' : 'red'),
+              padding: 10, 
+              borderRadius: 10,
+              opacity: !isConnected ? 0.5 : 1
+            }}
+            disabled={!isConnected}
             > 
             <Text style={{ color: 'white', textAlign: 'center' }}>
             {pumpStatus === 'Pump_ON' ? 'Pump ON' : 'Pump OFF'}
@@ -556,7 +563,14 @@ const handlePumpChange = (text: any) => {
         
           <TouchableOpacity
             onPress={() => toggleSolA(solAStatus === 'sola_on' ? 'sola_off' : 'sola_on')}
-            style={{ width:80,backgroundColor: solAStatus === 'sola_off' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+            style={{ 
+              width: 80,
+              backgroundColor: !isConnected ? '#808080' : (solAStatus === 'sola_off' ? '#008080' : 'red'),
+              padding: 10, 
+              borderRadius: 10,
+              opacity: !isConnected ? 0.5 : 1
+            }}
+            disabled={!isConnected}
           >
             <Text style={{ color: 'white', textAlign: 'center' }}>
             {solAStatus === 'sola_off' ? 'Zone A Ambient' : 'Zone A Vacuum'}
@@ -565,7 +579,14 @@ const handlePumpChange = (text: any) => {
           {/* <Button title="Sol B" onPress={() => toggleSolB(solBStatus === 'solb_on' ? 'solb_off' : 'solb_on')} /> */}
           <TouchableOpacity
             onPress={() => toggleSolB(solBStatus === 'solb_on' ? 'solb_off' : 'solb_on')}
-            style={{ width:80,backgroundColor: solBStatus === 'solb_off' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+            style={{ 
+              width: 80,
+              backgroundColor: !isConnected ? '#808080' : (solBStatus === 'solb_off' ? '#008080' : 'red'),
+              padding: 10, 
+              borderRadius: 10,
+              opacity: !isConnected ? 0.5 : 1
+            }}
+            disabled={!isConnected}
           >
              <Text style={{ color: 'white', textAlign: 'center' }}>
             {solBStatus === 'solb_off' ? 'Zone B Ambient' : 'Zone B Vacuum'}
@@ -574,7 +595,14 @@ const handlePumpChange = (text: any) => {
           {/* <Button title="Sol C" onPress={() => toggleSolC(solCStatus === 'solc_on' ? 'solc_off' : 'solc_on')} /> */}
           <TouchableOpacity
             onPress={() => toggleSolC(solCStatus === 'solc_on' ? 'solc_off' : 'solc_on')}
-            style={{ width:80,backgroundColor: solCStatus === 'solc_off' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+            style={{ 
+              width: 80,
+              backgroundColor: !isConnected ? '#808080' : (solCStatus === 'solc_off' ? '#008080' : 'red'),
+              padding: 10, 
+              borderRadius: 10,
+              opacity: !isConnected ? 0.5 : 1
+            }}
+            disabled={!isConnected}
           >
            <Text style={{ color: 'white', textAlign: 'center' }}>
             {solCStatus === 'solc_off' ? 'Zone C Ambient' : 'Zone C Vacuum'}
@@ -621,7 +649,14 @@ const handlePumpChange = (text: any) => {
 
             <TouchableOpacity
             onPress={() => toggleLed(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on')}
-            style={{ width:140,backgroundColor: ledStatus === 'cycle_on' ? 'green' : 'red', padding: 10, borderRadius: 10, }}
+            style={{ 
+              width: 140,
+              backgroundColor: !isConnected ? '#808080' : (ledStatus === 'cycle_on' ? '#008080' : 'red'),
+              padding: 10, 
+              borderRadius: 10,
+              opacity: !isConnected ? 0.5 : 1
+            }}
+            disabled={!isConnected}
           >
             <Text style={{ color: 'white', textAlign: 'center' }}>
             {ledStatus === 'cycle_off' ? 'Cycle OFF' : 'Cycle ON'}
@@ -638,30 +673,30 @@ const handlePumpChange = (text: any) => {
         </View>
       </View>
       
-      <View>
-        <View style={{ flexDirection: 'row',alignItems: 'center'}}>
-          <Text style={{ margin: 2,width:300,fontSize:20}}>FULL CYCLE TIME in second:</Text>
+      <View style={styles.inputContainer}>
+        <View style={styles.inputRow}>
+          <Text style={styles.inputLabel}>FULL CYCLE TIME in second:</Text>
           <TextInput
-            style={[styles.input, { flex: 1, marginLeft: 10 }]}
+            style={styles.textInput}
             keyboardType='numeric'
             onChangeText={(text) => { handleCycleChange(text) }}
             placeholder=''
             value={fullcycleValue.toString()}
           />
         </View>
-        <Text style={{ margin: 0,fontSize:20 }}>PARTIAL CYCLE TIME in second: {halfccycleValue}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ margin: 2 ,width:300,fontSize:20}}>PUMP ON TIME in second:</Text>
+        
+        <Text style={styles.partialCycleText}>PARTIAL CYCLE TIME in second: {halfccycleValue}</Text>
+        
+        <View style={styles.inputRow}>
+          <Text style={styles.inputLabel}>PUMP ON TIME in second:</Text>
           <TextInput
-            style={[styles.input, { flex: 1, marginLeft: 10 }]}
+            style={styles.textInput}
             keyboardType='numeric'
             onChangeText={(text) => { handlePumpChange(text) }}
             placeholder=''
             value={pumpTime.toString()}
-            
           />
         </View>
-
       </View>
       {!isScannerVisible && (
         <Button title="Update new paramters" onPress={() => {updateCycleTime(fullcycleValue*1000,pumpTime*1000)}} />
@@ -775,6 +810,35 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: 'black',
     fontWeight: 'bold',
+  },
+  inputContainer: {
+    paddingHorizontal: 16,
+    marginVertical: 10,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    justifyContent: 'space-between',
+  },
+  inputLabel: {
+    flex: 3,
+    fontSize: 16,
+    paddingRight: 10,
+  },
+  textInput: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    backgroundColor: '#fff',
+    minWidth: 80,
+    maxWidth: 120,
+  },
+  partialCycleText: {
+    fontSize: 16,
+    marginVertical: 10,
   },
 });
 export default App;
