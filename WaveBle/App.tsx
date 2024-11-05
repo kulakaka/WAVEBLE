@@ -230,17 +230,13 @@ const handleNotification = (decodedValue: string) => {
   console.log('Notification received:', decodedValue);
   if (decodedValue === 'Solenoid A ON') {
     setSolAStatus('sola_on');
-    // setSolBStatus('solb_off');
-    // setSolCStatus('solc_off');
+
   }
   if (decodedValue === 'Solenoid B ON') {
-    // setSolAStatus('sola_off');
     setSolBStatus('solb_on');
-    // setSolCStatus('solc_off');
   }
   if (decodedValue === 'Solenoid C ON') {
-    // setSolAStatus('sola_off');
-    // setSolBStatus('solb_off');
+
     setSolCStatus('solc_on');
   }
   if (decodedValue === 'Solenoid A OFF') {
@@ -260,15 +256,11 @@ const handleNotification = (decodedValue: string) => {
   }
   if (decodedValue === 'Cycle ON') {
     setLedStatus('cycle_on');
-    // setSolAStatus('sola_on');
-    // setPumpStatus('Pump_ON');
+  
 
   }
   if (decodedValue === 'Cycle OFF') {
     setLedStatus('cycle_off');
-    // setSolAStatus('sola_off');
-    // setSolBStatus('solb_off');
-    // setSolCStatus('solc_off');
     setSolAStatus('sola_on');
     setSolBStatus('solb_on');
     setSolCStatus('solc_on');
@@ -302,10 +294,7 @@ const handleNotification = (decodedValue: string) => {
       await bleManager.cancelDeviceConnection(connectedDevice.id);
       setIsConnected(false);
       setConnectedDevice(null);
-      setSolAStatus('sola_off');
-      setSolBStatus('solb_off');
-      setSolCStatus('solc_off');
-      setPumpStatus('Pump_OFF');
+ 
       console.log('Disconnected from device', connectedDevice.name);
       setIsConnecting(false);
     } catch (error) {
