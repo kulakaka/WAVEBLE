@@ -40,7 +40,8 @@ unsigned long pumpTime = 30000;  // Default pump time (in milliseconds)
 unsigned long cushionInitTime = 20000;
 unsigned long previousPumpTime = 0;
 unsigned int pwmvalue = 255;
-
+int fullyCycleAddress = 0;
+int pumpTimeAddress = 1;
 
 void sendMessage(String message)
 {
@@ -115,8 +116,9 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           Serial.println("Pump ON");
 
           // Notify the connected device
-          pCharacteristic->setValue("Pump ON");
-          pCharacteristic->notify();
+          // pCharacteristic->setValue("Pump ON");
+          // pCharacteristic->notify();
+          sendMessage("Pump ON");
         }
         else if (rxValue == "pump_off")
         {
@@ -126,8 +128,9 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 
           Serial.println("Pump OFF");
           // Notify the connected device
-          pCharacteristic->setValue("Pump OFF");
-          pCharacteristic->notify();
+          // pCharacteristic->setValue("Pump OFF");
+          // pCharacteristic->notify();
+          sendMessage("Pump OFF");
         }
         if (rxValue == "sola_on")
         {
@@ -136,8 +139,9 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           //          insertSol(SOLENOID_A_PIN);
           Serial.println("Solenoid A ON");
           // Notify the connected device
-          pCharacteristic->setValue("Solenoid A ON");
-          pCharacteristic->notify();
+          // pCharacteristic->setValue("Solenoid A ON");
+          // pCharacteristic->notify();
+          sendMessage("Solenoid A ON");
         }
         else if (rxValue == "sola_off")
         {
@@ -145,8 +149,9 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           //          removeSol(SOLENOID_A_PIN);
           Serial.println("Solenoid A OFF");
           // Notify the connected device
-          pCharacteristic->setValue("Solenoid A OFF");
-          pCharacteristic->notify();
+          // pCharacteristic->setValue("Solenoid A OFF");
+          // pCharacteristic->notify();
+          sendMessage("Solenoid A OFF");
         }
         if (rxValue == "solb_on")
         {
@@ -154,8 +159,9 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           //          insertSol(SOLENOID_B_PIN);
           Serial.println("Solenoid B ON");
           // Notify the connected device
-          pCharacteristic->setValue("Solenoid B ON");
-          pCharacteristic->notify();
+          // pCharacteristic->setValue("Solenoid B ON");
+          // pCharacteristic->notify();
+          sendMessage("Solenoid B ON");
         }
         if (rxValue == "solb_off")
         {
@@ -163,8 +169,9 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           digitalWrite(SOLENOID_B_PIN, HIGH);
           Serial.println("Solenoid B OFF");
           // Notify the connected device
-          pCharacteristic->setValue("Solenoid B OFF");
-          pCharacteristic->notify();
+          // pCharacteristic->setValue("Solenoid B OFF");
+          // pCharacteristic->notify();
+          sendMessage("Solenoid B OFF");
         }
         if (rxValue == "solc_on")
         {
@@ -173,8 +180,9 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           //          insertSol(SOLENOID_C_PIN);
           Serial.println("Solenoid C ON");
           // Notify the connected device
-          pCharacteristic->setValue("Solenoid C ON");
-          pCharacteristic->notify();
+          // pCharacteristic->setValue("Solenoid C ON");
+          // pCharacteristic->notify();
+          sendMessage("Solenoid C ON");
         }
         if (rxValue == "solc_off")
         {
@@ -183,8 +191,9 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           Serial.println("Solenoid C OFF");
 
           // Notify the connected device
-          pCharacteristic->setValue("Solenoid C OFF");
-          pCharacteristic->notify();
+          // pCharacteristic->setValue("Solenoid C OFF");
+          // pCharacteristic->notify();
+          sendMessage("Solenoid C OFF");
         }
         //set full cycle time and pump time
         if (rxValue.startsWith("set_times"))
@@ -195,14 +204,15 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           fullyCycleTime = rxValue.substring(sep1 + 1, sep2).toInt();
           pumpTime = rxValue.substring(sep2 + 1).toInt();
           interval = fullyCycleTime / 3;
-
-
-          Serial.print("Set fullyCycleTime: ");
-          Serial.println(fullyCycleTime);
-          Serial.print("Set pumpTime: ");
-          Serial.println(pumpTime);
-          Serial.println("Interval");
-          Serial.println(interval);
+          EEPROM.put(fullyCycleAddress, fullyCycleTime);
+          EEPROM.put(pumpTimeAddress, pumpTime);
+          // Serial.print("Set fullyCycleTime: ");
+          // Serial.println(fullyCycleTime);
+          // Serial.print("Set pumpTime: ");
+          // Serial.println(pumpTime);
+          // Serial.println("Interval");
+          // Serial.println(interval);
+          sendMessage("Cycle ON");
           automationActive = true;  // Start the automation sequence
 
 
@@ -243,6 +253,10 @@ void setup() {
   digitalWrite(SOLENOID_A_PIN, LOW);  // Start with all solenoids open
   digitalWrite(SOLENOID_B_PIN, LOW);
   digitalWrite(SOLENOID_C_PIN, LOW);
+
+  // Read the stored values from EEPROM
+  EEPROM.get(fullyCycleAddress, fullyCycleTime);
+  EEPROM.get(pumpTimeAddress, pumpTime);
 
   // Configure PWM for the pump
   ledcAttach(PUMP_PIN, PWM_FREQ, PWM_RESOLUTION);
@@ -323,13 +337,8 @@ void loop() {
         digitalWrite(SOLENOID_B_PIN, HIGH);  //  Energies solenoid B
         digitalWrite(SOLENOID_C_PIN, HIGH);  //  Energies solenoid C
         ledcWrite(PUMP_PIN, pwmvalue);
-        // Notify the connected device
-//        pCharacteristic->setValue("Solenoid A ON");
-//        pCharacteristic->notify();
-//        pCharacteristic->setValue("Pump ON");
-//        pCharacteristic->notify();
-        sendMessage("Solenoid A ON");
-        sendMessage("Pump ON");
+     
+        sendMessage("Cycle A On");
         
         Serial.println("State A");
         delay(pumpTime);
@@ -354,8 +363,9 @@ void loop() {
 //        pCharacteristic->notify();
 //        pCharacteristic->setValue("Pump ON");
 //        pCharacteristic->notify();
-        sendMessage("Solenoid B ON");
-        sendMessage("Pump ON");
+        // sendMessage("Solenoid B ON");
+        // sendMessage("Pump ON");
+        sendMessage("Cycle B On");
         Serial.println("State B");
         delay(pumpTime);
 
@@ -381,8 +391,9 @@ void loop() {
 //        pCharacteristic->setValue("Pump ON");
 //        pCharacteristic->notify();
 //        Serial.println("State C");
-        sendMessage("Solenoid C ON");
-        sendMessage("Pump ON");
+        // sendMessage("Solenoid C ON");
+        // sendMessage("Pump ON");
+        sendMessage("Cycle C On");
         delay(pumpTime);
 
         ledcWrite(PUMP_PIN, 0);
