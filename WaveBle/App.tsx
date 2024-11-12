@@ -6,7 +6,7 @@ import {
   Platform, Alert,
   SafeAreaView, ScrollView,
   TouchableOpacity, TextInput,
-  StyleSheet, Image
+  StyleSheet, Image, ActivityIndicator
 } from 'react-native';
 import { BleManager, Characteristic, Device, State } from 'react-native-ble-plx';
 // import utf8 from 'utf8';
@@ -43,6 +43,10 @@ const App = () => {
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [cameraAuthorized, setCameraAuthorized] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isStoppingCycle, setIsStoppingCycle] = useState(false);
+
   useEffect(() => {
     const requestCameraPermission = async () => {
       if (Platform.OS === 'android') {
@@ -120,11 +124,30 @@ const App = () => {
   };
 
   const scanQrAndConnect = (qr: string) => {
+    setIsSearching(true);
+    
+    const timeout = setTimeout(() => {
+      if (isSearching) {
+        bleManager.stopDeviceScan();
+        setIsSearching(false);
+        setIsConnecting(false);
+        setDevices([]);
+        Alert.alert(
+          'Device Not Found',
+          'Unable to find the device. Please try reconnecting.',
+          [{ text: 'OK' }]
+        );
+      }
+    }, 10000);
+    
+    setSearchTimeout(timeout);
+
     try {
       bleManager.startDeviceScan(null, null, (error, device) => {
-        console.log(device?.id);
         if (error) {
           console.log('error', error);
+          setIsSearching(false);
+          clearTimeout(timeout);
           return;
         }
         if (device && device.id) {
@@ -139,13 +162,17 @@ const App = () => {
             console.log('Device found', device.name);
             setConnectedDevice(device);
             bleManager.stopDeviceScan();
-            connect(device);
-
+            clearTimeout(timeout);
+            connect(device).then(() => {
+              setIsSearching(false);
+            });
           }
         }
       });
     } catch (error) {
       console.log('Error scanning for devices', error);
+      setIsSearching(false);
+      clearTimeout(timeout);
     }
   };
 
@@ -239,6 +266,7 @@ const App = () => {
       setSolBStatus('solb_on');
       setSolCStatus('solc_on');
       setPumpStatus('Pump_OFF');
+      setIsStoppingCycle(false);
     }
     if (decodedValue === 'setupFinished') {
       setSolAStatus('sola_on');
@@ -344,6 +372,32 @@ const App = () => {
       setOutputText(prevText => `${prevText}\n${'No device connected'}`)
       return;
     }
+    if (status === 'cycle_off') {
+      setIsStoppingCycle(true);
+      bleManager.writeCharacteristicWithResponseForDevice(
+        connectedDevice.id,
+        SERVICE_UUID,
+        CHARACTERISTIC_UUID_TX,
+        base64.encode("cycle_off")
+      )
+      .then(() => {
+        bleManager.monitorCharacteristicForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          (error, characteristic) => {
+            if (error) {
+              console.log('Error monitoring characteristic', error);
+              setIsStoppingCycle(false);
+              return;
+            }
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            handleNotification(decodedValue);
+          }
+        )
+      })
+    }
     if (status === 'cycle_on') {
       console.log('Half Cycle:', halfcycleValue);
       console.log('Pump Time:', pumpTime);
@@ -360,30 +414,6 @@ const App = () => {
         SERVICE_UUID,
         CHARACTERISTIC_UUID_TX,
         base64.encode(timeMessage)
-      )
-      .then(() => {
-  
-        bleManager.monitorCharacteristicForDevice(
-          connectedDevice.id,
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID_TX,
-          (error, characteristic) => {
-            if (error) {
-              console.log('Error monitoring characteristic', error);
-              return;
-            }
-            const value = characteristic?.value;
-            const decodedValue = value ? base64.decode(value) : '';
-            handleNotification(decodedValue);
-          }
-        )  })
-    }
-    if (status === 'cycle_off') {
-      bleManager.writeCharacteristicWithResponseForDevice(
-        connectedDevice.id,
-        SERVICE_UUID,
-        CHARACTERISTIC_UUID_TX,
-        base64.encode("cycle_off")
       )
       .then(() => {
   
@@ -557,6 +587,14 @@ const App = () => {
 
 
 
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
   return (
 
     <SafeAreaView style={[styles.safeArea, { backgroundColor: '#F6F0E6' }]}>
@@ -669,6 +707,24 @@ const App = () => {
             >
               <Text style={styles.closeButtonText}>Close Scanner</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {isSearching && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#008080" />
+            <Text style={styles.loadingText}>Searching for device...</Text>
+          </View>
+        </View>
+      )}
+
+      {isStoppingCycle && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#008080" />
+            <Text style={styles.loadingText}>Stopping the cycle...</Text>
           </View>
         </View>
       )}
@@ -826,6 +882,28 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     alignItems: 'center',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#333',
   },
 });
 export default App;
