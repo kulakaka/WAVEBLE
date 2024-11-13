@@ -329,19 +329,19 @@ const App = () => {
       await bleManager.cancelDeviceConnection(connectedDevice.id);
       setIsConnected(false);
       setConnectedDevice(null);
-      setSolAStatus('sola_off');
-      setSolBStatus('solb_off');
-      setSolCStatus('solc_off');
-      setPumpStatus('Pump_OFF');
-      setLedStatus('cycle_off'); // Reset cycle status
+      // setSolAStatus('sola_off');
+      // setSolBStatus('solb_off');
+      // setSolCStatus('solc_off');
+      // setPumpStatus('Pump_OFF');
+      // setLedStatus('cycle_off'); // Reset cycle status
       setIsConnecting(false);
       setDevices([]); // Clear devices list
       console.log('Disconnected from device', connectedDevice.name);
 
-      // Reset other states if needed
-      setfullcycleValue(120);
-      setPumpTime(30);
-      setPumpSpeed(255);
+      // // Reset other states if needed
+      // setfullcycleValue(120);
+      // setPumpTime(30);
+      // setPumpSpeed(255);
 
       Alert.alert('Device Disconnected', 'Successfully disconnected from the cushion.');
     } catch (error) {
@@ -353,18 +353,11 @@ const App = () => {
   const deviceDisconnected = () => {
     setIsConnected(false);
     setConnectedDevice(null);
-    setSolAStatus('sola_off');
-    setSolBStatus('solb_off');
-    setSolCStatus('solc_off');
-    setPumpStatus('Pump_OFF');
-    setLedStatus('cycle_off'); // Reset cycle status
-    setIsConnecting(false);
     setDevices([]); // Clear devices list
-    console.log('Disconnected from device');
     Alert.alert('Device Disconnected', 'Successfully disconnected from the cushion.');
   }
 
-  const togglecycle = async (status: string, halfcycleValue: number, pumpTime: number) => {
+  const togglecycle = async (status: string, halfcycleValue: number, pumpTime: number,pumpSpeed:number) => {
     console.log('Toggle Cycle:', status);
     if (!connectedDevice) {
       console.log('No device connected');
@@ -401,13 +394,21 @@ const App = () => {
     if (status === 'cycle_on') {
       console.log('Half Cycle:', halfcycleValue);
       console.log('Pump Time:', pumpTime);
+      
+      // Add pump speed validation
+      if (pumpSpeed < 0 || pumpSpeed > 255) {
+        console.log('Invalid pump speed value');
+        Alert.alert('Invalid pump speed', 'Pump speed must be between 0 and 255');
+        return;
+      }
+      
       if (halfcycleValue/1000 >= 600 || pumpTime/1000 >= 31) {
         console.log('Invalid time values');
         Alert.alert('Invalid time values');
         return;
       }
       const fullcycleValue = halfcycleValue * 3;
-      const timeMessage = `set_times;${fullcycleValue};${pumpTime}`;
+      const timeMessage = `set_params;${fullcycleValue};${pumpTime};${pumpSpeed}`;
       console.log('Time Message:', timeMessage);
       bleManager.writeCharacteristicWithResponseForDevice(
         connectedDevice.id,
@@ -416,7 +417,6 @@ const App = () => {
         base64.encode(timeMessage)
       )
       .then(() => {
-  
         bleManager.monitorCharacteristicForDevice(
           connectedDevice.id,
           SERVICE_UUID,
@@ -430,7 +430,8 @@ const App = () => {
             const decodedValue = value ? base64.decode(value) : '';
             handleNotification(decodedValue);
           }
-        )  })
+        )
+      })
     }
     };
 
@@ -581,8 +582,10 @@ const App = () => {
   };
 
 
-  const handlePumpSpeedChange = (value: any) => {
-    setPumpSpeed(value);
+  const handlePumpSpeedChange = (value: number) => {
+    // Ensure value is within bounds
+    const boundedValue = Math.min(Math.max(value, 0), 255);
+    setPumpSpeed(boundedValue);
   };
 
 
@@ -622,7 +625,7 @@ const App = () => {
 
 
               // updateCycleTime(halfcycleValue*1000, pumpTime*1000);
-              togglecycle(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on', halfcycleValue * 1000, pumpTime * 1000);
+              togglecycle(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on', halfcycleValue * 1000, pumpTime * 1000,pumpSpeed);
 
             }}
             style={[
@@ -680,7 +683,7 @@ const App = () => {
             <TextInput
               style={styles.numericInput}
               keyboardType='numeric'
-              onChangeText={(text) => handlePumpSpeedChange(text)}
+              onChangeText={(text) => handlePumpSpeedChange(parseInt(text)||0)}
               value={pumpSpeed.toString()}
             />
             <Text style={styles.smallInputLabel}>Pump Speed</Text>

@@ -5,7 +5,6 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <vector>
-#include <EEPROM.h>
 
 BLEServer* pServer = NULL;
 BLECharacteristic* pCharacteristic = NULL;
@@ -18,7 +17,7 @@ bool oldDeviceConnected = false;
 #define SOLENOID_B_PIN 27
 #define SOLENOID_C_PIN 14
 #define PUMP_PIN 4
-
+#include <Preferences.h>
 
 // PWM settings
 #define PUMP_CHANNEL 0        // PWM channel for the pump (0-15)
@@ -195,43 +194,30 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           // pCharacteristic->notify();
           sendMessage("Solenoid C OFF");
         }
-        //set full cycle time and pump time
-        if (rxValue.startsWith("set_times"))
+               //set full cycle time and pump time
+        if (rxValue.startsWith("set_params"))
         {
           int sep1 = rxValue.indexOf(';');
           int sep2 = rxValue.indexOf(';', sep1 + 1);
+          int sep3 = rxValue.indexOf(';', sep2 + 1);
 
           fullyCycleTime = rxValue.substring(sep1 + 1, sep2).toInt();
-          pumpTime = rxValue.substring(sep2 + 1).toInt();
+          pumpTime = rxValue.substring(sep2 + 1, sep3).toInt();
+          pwmvalue = rxValue.substring(sep3 + 1).toInt();
           interval = fullyCycleTime / 3;
+
+          Serial.print("Received Full Cycle Time: ");
+          Serial.println(fullyCycleTime);
+          Serial.print("Received Pump Time: ");
+          Serial.println(pumpTime);
+          Serial.print("Received PWM Value: ");
+          Serial.println(pwmvalue);
 
           sendMessage("Cycle ON");
           sendMessage("Cycle A On");
-          currentState = SOLENOID_A; // Start with solenoid A
-          automationActive = true;  // Start the automation sequence
+          currentState = SOLENOID_A;
+          automationActive = true;
           Serial.println("Automation started: Power ON");
-
-          automationActive = true;  // Start the automation sequence
-
-
-        }
-
-        if (rxValue.startsWith("pump_pwm"))
-        {
-
-          // Extract the value after the semicolon
-          int sep = rxValue.indexOf(';');
-
-          // Ensure there is something after the semicolon
-          if (sep != -1 && sep + 1 < rxValue.length()) {
-            String pwmStr = rxValue.substring(sep + 1); // Get the substring after the semicolon
-            pwmvalue = pwmStr.toInt();                  // Convert to integer
-
-            Serial.print("Received PWM Value: ");
-            Serial.println(pwmvalue);
-          } else {
-            Serial.println("Invalid PWM command format");
-          }
         }
         
       }
@@ -263,6 +249,10 @@ void setup() {
   digitalWrite(SOLENOID_A_PIN, LOW);  //  Deengergies solenoid A
   digitalWrite(SOLENOID_B_PIN, LOW);  //  Deengergies solenoid B
   digitalWrite(SOLENOID_C_PIN, LOW);  //  Deengergies solenoid C
+
+  // Open NVS with a namespace
+  preferences.begin("ParamData", false);
+  
   // Create the BLE Device
   BLEDevice::init("ESP32");
 
