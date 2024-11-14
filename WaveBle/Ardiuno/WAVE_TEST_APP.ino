@@ -5,6 +5,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <vector>
+#include <Preferences.h>
 
 BLEServer* pServer = NULL;
 BLECharacteristic* pCharacteristic = NULL;
@@ -17,7 +18,6 @@ bool oldDeviceConnected = false;
 #define SOLENOID_B_PIN 27
 #define SOLENOID_C_PIN 14
 #define PUMP_PIN 4
-#include <Preferences.h>
 
 // PWM settings
 #define PUMP_CHANNEL 0        // PWM channel for the pump (0-15)
@@ -40,18 +40,22 @@ unsigned long cushionInitTime = 20000;
 unsigned long previousPumpTime = 0;
 unsigned int pwmvalue = 255;
 
+Preferences preferences;
 
-void sendMessage(String message)
+void sendMessage(const char* message)
 {
-  // Notify the connected device
+  Serial.println("Sending message: " + String(message));
   pCharacteristic->setValue(message);
   pCharacteristic->notify();
+  delay(100); // Add small delay after notification
 }
 
 
 class MyServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
+
+
     }
 
     void onDisconnect(BLEServer* pServer) {
@@ -107,6 +111,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           //          pCharacteristic->notify();
           sendMessage("Cycle OFF");
         }
+
         if (rxValue == "pump_on")
         {
           //          digitalWrite(PUMP_PIN, HIGH);
@@ -194,7 +199,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           // pCharacteristic->notify();
           sendMessage("Solenoid C OFF");
         }
-               //set full cycle time and pump time
+        //set full cycle time and pump time
         if (rxValue.startsWith("set_params"))
         {
           int sep1 = rxValue.indexOf(';');
@@ -206,11 +211,16 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           pwmvalue = rxValue.substring(sep3 + 1).toInt();
           interval = fullyCycleTime / 3;
 
-          Serial.print("Received Full Cycle Time: ");
+          // Store values in non-volatile memory
+          preferences.putULong("cycleTime", fullyCycleTime);
+          preferences.putULong("pumpTime", pumpTime);
+          preferences.putUInt("pwmValue", pwmvalue);
+
+          Serial.print("Stored Full Cycle Time: ");
           Serial.println(fullyCycleTime);
-          Serial.print("Received Pump Time: ");
+          Serial.print("Stored Pump Time: ");
           Serial.println(pumpTime);
-          Serial.print("Received PWM Value: ");
+          Serial.print("Stored PWM Value: ");
           Serial.println(pwmvalue);
 
           sendMessage("Cycle ON");
@@ -219,7 +229,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           automationActive = true;
           Serial.println("Automation started: Power ON");
         }
-        
+
       }
     }
 };
@@ -228,6 +238,15 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 
 void setup() {
   Serial.begin(115200);
+
+  // Open preferences with namespace "params"
+  preferences.begin("params", false);
+
+  // Retrieve stored values or use defaults if not found
+  fullyCycleTime = preferences.getULong("cycleTime", 360000);
+  pumpTime = preferences.putULong("pumpTime", 30000);
+  pwmvalue = preferences.getUInt("pwmValue", 255);
+  interval = fullyCycleTime / 3;
 
   // Initialize the GPIO pins for the solenoids
   pinMode(SOLENOID_A_PIN, OUTPUT);
@@ -250,9 +269,6 @@ void setup() {
   digitalWrite(SOLENOID_B_PIN, LOW);  //  Deengergies solenoid B
   digitalWrite(SOLENOID_C_PIN, LOW);  //  Deengergies solenoid C
 
-  // Open NVS with a namespace
-  preferences.begin("ParamData", false);
-  
   // Create the BLE Device
   BLEDevice::init("ESP32");
 
@@ -281,6 +297,13 @@ void setup() {
   // Start advertising
   pServer->getAdvertising()->start();
   Serial.println("Waiting for a client connection...");
+
+  Serial.print("Stored Full Cycle Time: ");
+  Serial.println(fullyCycleTime);
+  Serial.print("Stored Pump Time: ");
+  Serial.println(pumpTime);
+  Serial.print("Stored PWM Value: ");
+  Serial.println(pwmvalue);
 };
 
 
@@ -303,8 +326,23 @@ void loop() {
   if (deviceConnected && !oldDeviceConnected) {
     Serial.println("Device connected");
     oldDeviceConnected = deviceConnected;
+    
+    // Send setupFinished first
     sendMessage("setupFinished");
-    Serial.println("setupFinished");
+    Serial.println("Sent: setupFinished");
+    
+    // Add longer delay between messages
+    delay(5000);
+    
+    // Format and send parameters
+    String params = 
+                    String(fullyCycleTime) + ";" + 
+                    String(pumpTime) + ";" + 
+                    String(pwmvalue);
+                    
+    Serial.println("Sending stored params: " + params);
+    sendMessage(params.c_str());  // Convert to c-string for better compatibility
+    Serial.println("Params sent");
   }
 
 

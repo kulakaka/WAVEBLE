@@ -125,7 +125,7 @@ const App = () => {
 
   const scanQrAndConnect = (qr: string) => {
     setIsSearching(true);
-    
+
     const timeout = setTimeout(() => {
       if (isSearching) {
         bleManager.stopDeviceScan();
@@ -138,8 +138,8 @@ const App = () => {
           [{ text: 'OK' }]
         );
       }
-    }, 10000);
-    
+    }, 15000);
+
     setSearchTimeout(timeout);
 
     try {
@@ -186,14 +186,14 @@ const App = () => {
       setIsConnected(true);
       setConnectedDevice(connectedDevice);
       setIsModealVisible(true);
-      
-      // Add delay of 1 second
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
+      // Add delay of 2 second
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       // Discover services and characteristics
       await connectedDevice.discoverAllServicesAndCharacteristics();
       console.log('Services and characteristics discovered');
-      
+
       // Monitor characteristic
       bleManager.monitorCharacteristicForDevice(
         connectedDevice.id,
@@ -209,17 +209,42 @@ const App = () => {
           handleNotification(decodedValue);
         }
       );
-      
+
     } catch (error) {
       console.log('Connection error', error);
       Alert.alert('Connection Error', 'Failed to connect to device');
     }
   };
-  
+
 
   // Function to handle BLE notification and update UI accordingly
   const handleNotification = (decodedValue: string) => {
-    console.log('Notification received:', decodedValue);
+    console.log('Raw notification received:', decodedValue);
+
+
+    console.log('Found stored_params message');
+    const params = decodedValue.split(';');
+    console.log('Split params:', params);
+
+    if (params.length === 3) {
+      console.log('Correct number of parameters found');
+      const storedCycleTime = parseInt(params[0]) / 3000; // Convert to seconds and get half cycle time
+      const storedPumpTime = parseInt(params[1]);  // Convert to seconds
+      const storedPumpSpeed = parseInt(params[2]);
+
+      console.log('Parsed values:');
+      console.log('Cycle Time:', storedCycleTime);
+      console.log('Pump Time:', storedPumpTime);
+      console.log('Pump Speed:', storedPumpSpeed);
+
+      sethalfcycleValue(storedCycleTime);
+      setPumpTime(storedPumpTime);
+      setPumpSpeed(storedPumpSpeed);
+    } else {
+      console.log('Incorrect number of parameters:', params.length);
+    }
+
+
     if (decodedValue === 'Solenoid A ON') {
       setSolAStatus('sola_on');
       // setSolBStatus('solb_off');
@@ -245,7 +270,6 @@ const App = () => {
       setSolCStatus('solc_off');
     }
     if (decodedValue === 'Pump ON') {
-      console.log('Testt1');
       setPumpStatus('Pump_ON');
     }
     if (decodedValue === 'Pump OFF') {
@@ -357,7 +381,7 @@ const App = () => {
     Alert.alert('Device Disconnected', 'Successfully disconnected from the cushion.');
   }
 
-  const togglecycle = async (status: string, halfcycleValue: number, pumpTime: number,pumpSpeed:number) => {
+  const togglecycle = async (status: string, halfcycleValue: number, pumpTime: number, pumpSpeed: number) => {
     console.log('Toggle Cycle:', status);
     if (!connectedDevice) {
       console.log('No device connected');
@@ -373,36 +397,36 @@ const App = () => {
         CHARACTERISTIC_UUID_TX,
         base64.encode("cycle_off")
       )
-      .then(() => {
-        bleManager.monitorCharacteristicForDevice(
-          connectedDevice.id,
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID_TX,
-          (error, characteristic) => {
-            if (error) {
-              console.log('Error monitoring characteristic', error);
-              setIsStoppingCycle(false);
-              return;
+        .then(() => {
+          bleManager.monitorCharacteristicForDevice(
+            connectedDevice.id,
+            SERVICE_UUID,
+            CHARACTERISTIC_UUID_TX,
+            (error, characteristic) => {
+              if (error) {
+                console.log('Error monitoring characteristic', error);
+                setIsStoppingCycle(false);
+                return;
+              }
+              const value = characteristic?.value;
+              const decodedValue = value ? base64.decode(value) : '';
+              handleNotification(decodedValue);
             }
-            const value = characteristic?.value;
-            const decodedValue = value ? base64.decode(value) : '';
-            handleNotification(decodedValue);
-          }
-        )
-      })
+          )
+        })
     }
     if (status === 'cycle_on') {
       console.log('Half Cycle:', halfcycleValue);
       console.log('Pump Time:', pumpTime);
-      
+
       // Add pump speed validation
       if (pumpSpeed < 0 || pumpSpeed > 255) {
         console.log('Invalid pump speed value');
         Alert.alert('Invalid pump speed', 'Pump speed must be between 0 and 255');
         return;
       }
-      
-      if (halfcycleValue/1000 >= 600 || pumpTime/1000 >= 31) {
+
+      if (halfcycleValue / 1000 >= 600 || pumpTime / 1000 >= 31) {
         console.log('Invalid time values');
         Alert.alert('Invalid time values');
         return;
@@ -416,24 +440,24 @@ const App = () => {
         CHARACTERISTIC_UUID_TX,
         base64.encode(timeMessage)
       )
-      .then(() => {
-        bleManager.monitorCharacteristicForDevice(
-          connectedDevice.id,
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID_TX,
-          (error, characteristic) => {
-            if (error) {
-              console.log('Error monitoring characteristic', error);
-              return;
+        .then(() => {
+          bleManager.monitorCharacteristicForDevice(
+            connectedDevice.id,
+            SERVICE_UUID,
+            CHARACTERISTIC_UUID_TX,
+            (error, characteristic) => {
+              if (error) {
+                console.log('Error monitoring characteristic', error);
+                return;
+              }
+              const value = characteristic?.value;
+              const decodedValue = value ? base64.decode(value) : '';
+              handleNotification(decodedValue);
             }
-            const value = characteristic?.value;
-            const decodedValue = value ? base64.decode(value) : '';
-            handleNotification(decodedValue);
-          }
-        )
-      })
+          )
+        })
     }
-    };
+  };
 
 
   const handleCycleChange = (text: any) => {
@@ -462,22 +486,23 @@ const App = () => {
       CHARACTERISTIC_UUID_TX,
       base64.encode(status)
     )
-    .then(() => {
-  
-      bleManager.monitorCharacteristicForDevice(
-        connectedDevice.id,
-        SERVICE_UUID,
-        CHARACTERISTIC_UUID_TX,
-        (error, characteristic) => {
-          if (error) {
-            console.log('Error monitoring characteristic', error);
-            return;
+      .then(() => {
+
+        bleManager.monitorCharacteristicForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          (error, characteristic) => {
+            if (error) {
+              console.log('Error monitoring characteristic', error);
+              return;
+            }
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            handleNotification(decodedValue);
           }
-          const value = characteristic?.value;
-          const decodedValue = value ? base64.decode(value) : '';
-          handleNotification(decodedValue);
-        }
-      )  })
+        )
+      })
   }
 
 
@@ -497,22 +522,23 @@ const App = () => {
       base64.encode(status)
     )
 
-    .then(() => {
-  
-      bleManager.monitorCharacteristicForDevice(
-        connectedDevice.id,
-        SERVICE_UUID,
-        CHARACTERISTIC_UUID_TX,
-        (error, characteristic) => {
-          if (error) {
-            console.log('Error monitoring characteristic', error);
-            return;
+      .then(() => {
+
+        bleManager.monitorCharacteristicForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          (error, characteristic) => {
+            if (error) {
+              console.log('Error monitoring characteristic', error);
+              return;
+            }
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            handleNotification(decodedValue);
           }
-          const value = characteristic?.value;
-          const decodedValue = value ? base64.decode(value) : '';
-          handleNotification(decodedValue);
-        }
-      )  })
+        )
+      })
   };
 
   const toggleSolB = async (status: string) => {
@@ -530,22 +556,23 @@ const App = () => {
       base64.encode(status)
     )
 
-    .then(() => {
-  
-      bleManager.monitorCharacteristicForDevice(
-        connectedDevice.id,
-        SERVICE_UUID,
-        CHARACTERISTIC_UUID_TX,
-        (error, characteristic) => {
-          if (error) {
-            console.log('Error monitoring characteristic', error);
-            return;
+      .then(() => {
+
+        bleManager.monitorCharacteristicForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          (error, characteristic) => {
+            if (error) {
+              console.log('Error monitoring characteristic', error);
+              return;
+            }
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            handleNotification(decodedValue);
           }
-          const value = characteristic?.value;
-          const decodedValue = value ? base64.decode(value) : '';
-          handleNotification(decodedValue);
-        }
-      )  })
+        )
+      })
 
   };
 
@@ -563,22 +590,23 @@ const App = () => {
       CHARACTERISTIC_UUID_TX,
       base64.encode(status)
     )
-    .then(() => {
-  
-      bleManager.monitorCharacteristicForDevice(
-        connectedDevice.id,
-        SERVICE_UUID,
-        CHARACTERISTIC_UUID_TX,
-        (error, characteristic) => {
-          if (error) {
-            console.log('Error monitoring characteristic', error);
-            return;
+      .then(() => {
+
+        bleManager.monitorCharacteristicForDevice(
+          connectedDevice.id,
+          SERVICE_UUID,
+          CHARACTERISTIC_UUID_TX,
+          (error, characteristic) => {
+            if (error) {
+              console.log('Error monitoring characteristic', error);
+              return;
+            }
+            const value = characteristic?.value;
+            const decodedValue = value ? base64.decode(value) : '';
+            handleNotification(decodedValue);
           }
-          const value = characteristic?.value;
-          const decodedValue = value ? base64.decode(value) : '';
-          handleNotification(decodedValue);
-        }
-      )  })
+        )
+      })
   };
 
 
@@ -625,7 +653,7 @@ const App = () => {
 
 
               // updateCycleTime(halfcycleValue*1000, pumpTime*1000);
-              togglecycle(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on', halfcycleValue * 1000, pumpTime * 1000,pumpSpeed);
+              togglecycle(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on', halfcycleValue * 1000, pumpTime * 1000, pumpSpeed);
 
             }}
             style={[
@@ -683,7 +711,7 @@ const App = () => {
             <TextInput
               style={styles.numericInput}
               keyboardType='numeric'
-              onChangeText={(text) => handlePumpSpeedChange(parseInt(text)||0)}
+              onChangeText={(text) => handlePumpSpeedChange(parseInt(text) || 0)}
               value={pumpSpeed.toString()}
             />
             <Text style={styles.smallInputLabel}>Pump Speed</Text>
