@@ -641,11 +641,22 @@ const App = () => {
                 setIsScannerVisible(true);
               }
             }}
-            style={styles.mainButton}
+            style={[styles.mainButton, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 60 }]}
           >
-            <Text style={{ color: 'white', textAlign: 'center' }}>
-              {isConnected ? 'Disconnect Cushion' : 'Connect Cushion'}
-            </Text>
+            <View style={{ flexDirection: 'column', marginRight: 10 }}>
+              <Text style={{ color: 'white', textAlign: 'center' }}>
+                {isConnected ? 'Disconnect to' : 'Connect to'}
+              </Text>
+              <Text style={{ color: 'white', textAlign: 'center' }}>
+                Cushion
+              </Text>
+            </View>
+            {!isConnected && (
+              <Image
+                source={require('./imgs/qrcodeIcon.png')}
+                style={{ width: 20, height: 20, tintColor: 'white' }}
+              />
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -907,12 +918,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, // Add padding to align with buttons below
   },
   mainButton: {
-    width: '45%', // Match the width of the buttons below
+    width: 160,
     height: 60,
     backgroundColor: 'blue',
     padding: 10,
     borderRadius: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingOverlay: {
     position: 'absolute',
