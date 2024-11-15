@@ -339,10 +339,6 @@ const App = () => {
       setSolCStatus('solc_on');
     }
 
-
-    // if (decodedValue !== 'Solenoid A ON' && decodedValue !== 'Solenoid B ON' && decodedValue !== 'Solenoid C ON' && decodedValue !== 'Pump ON' && decodedValue !== 'Pump OFF' && decodedValue !== 'Cycle ON' && decodedValue !== 'Cycle OFF' && decodedValue !== 'All Solenoids OFF') {
-    //   console.log('Unknown status:', decodedValue);
-    // }
   };
   const DisconnectFromDevice = async () => {
     if (!connectedDevice) {
@@ -362,10 +358,6 @@ const App = () => {
       setDevices([]); // Clear devices list
       console.log('Disconnected from device', connectedDevice.name);
 
-      // // Reset other states if needed
-      // setfullcycleValue(120);
-      // setPumpTime(30);
-      // setPumpSpeed(255);
 
       Alert.alert('Device Disconnected', 'Successfully disconnected from the cushion.');
     } catch (error) {
