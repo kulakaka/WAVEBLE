@@ -138,7 +138,7 @@ const App = () => {
           [{ text: 'OK' }]
         );
       }
-    }, 15000);
+    }, 20000);
 
     setSearchTimeout(timeout);
 
@@ -220,31 +220,34 @@ const App = () => {
   // Function to handle BLE notification and update UI accordingly
   const handleNotification = (decodedValue: string) => {
     console.log('Raw notification received:', decodedValue);
+    
+   
+      // console.log('Found stored_params message');
+      // console.log('Split params:', params);
+      
+      if ( decodedValue.split(';').length === 4) {
+        const params = decodedValue.split(';');
 
-
-    console.log('Found stored_params message');
-    const params = decodedValue.split(';');
-    console.log('Split params:', params);
-
-    if (params.length === 3) {
-      console.log('Correct number of parameters found');
-      const storedCycleTime = parseInt(params[0]) / 3000; // Convert to seconds and get half cycle time
-      const storedPumpTime = parseInt(params[1]);  // Convert to seconds
-      const storedPumpSpeed = parseInt(params[2]);
-
-      console.log('Parsed values:');
-      console.log('Cycle Time:', storedCycleTime);
-      console.log('Pump Time:', storedPumpTime);
-      console.log('Pump Speed:', storedPumpSpeed);
-
-      sethalfcycleValue(storedCycleTime);
-      setPumpTime(storedPumpTime);
-      setPumpSpeed(storedPumpSpeed);
-    } else {
-      console.log('Incorrect number of parameters:', params.length);
-    }
-
-
+        console.log('Correct number of parameters found');
+        const storedCycleTime = parseInt(params[0]) / 3000; // Convert to seconds and get half cycle time
+        const storedPumpTime = parseInt(params[1])/1000 ;  // Convert to seconds
+        const storedPumpSpeed = parseInt(params[2]);
+        const storedCycleStatus = params[3] === '1'; // Convert string to boolean
+        
+        console.log('Parsed values:');
+        console.log('Cycle Time:', storedCycleTime);
+        console.log('Pump Time:', storedPumpTime);
+        console.log('Pump Speed:', storedPumpSpeed);
+        console.log('Cycle Status:', storedCycleStatus);
+        
+        sethalfcycleValue(storedCycleTime);
+        setPumpTime(storedPumpTime);
+        setPumpSpeed(storedPumpSpeed);
+        setLedStatus(storedCycleStatus ? 'cycle_on' : 'cycle_off');
+      
+      }
+    
+    
     if (decodedValue === 'Solenoid A ON') {
       setSolAStatus('sola_on');
       // setSolBStatus('solb_off');
@@ -637,11 +640,11 @@ const App = () => {
           >
             <View style={{ flexDirection: 'column', marginRight: 10 }}>
               <Text style={{ color: 'white', textAlign: 'center' }}>
-                {isConnected ? 'Disconnect to' : 'Connect to'}
+                {isConnected ? 'Connected' : 'Disconnected'}
               </Text>
-              <Text style={{ color: 'white', textAlign: 'center' }}>
+              {/* <Text style={{ color: 'white', textAlign: 'center' }}>
                 Cushion
-              </Text>
+              </Text> */}
             </View>
             {!isConnected && (
               <Image

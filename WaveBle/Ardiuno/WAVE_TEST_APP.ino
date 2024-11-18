@@ -4,8 +4,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
-#include <vector>
-#include <Preferences.h>
+#include <EEPROM.h>
 
 BLEServer* pServer = NULL;
 BLECharacteristic* pCharacteristic = NULL;
@@ -32,7 +31,7 @@ bool oldDeviceConnected = false;
 enum State { OFF, SOLENOID_A, SOLENOID_B, SOLENOID_C };
 State currentState = OFF;
 unsigned long previousMillis = 0;
-bool automationActive = false;
+bool automationActive = true;
 unsigned long fullyCycleTime = 360000;  // Default 3 times of interval (3 * 3000ms)
 unsigned long interval = fullyCycleTime / 3 ;
 unsigned long pumpTime = 30000;  // Default pump time (in milliseconds)
@@ -40,7 +39,11 @@ unsigned long cushionInitTime = 20000;
 unsigned long previousPumpTime = 0;
 unsigned int pwmvalue = 255;
 
-Preferences preferences;
+// Define EEPROM addresses for each variable
+#define EEPROM_SIZE 12  // 4 bytes for each variable (3 variables)
+#define CYCLE_TIME_ADDR 0
+#define PUMP_TIME_ADDR 4
+#define PUMP_SPEED_ADDR 8
 
 void sendMessage(const char* message)
 {
@@ -76,12 +79,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
         rxValue.toLowerCase();
         // Control solenoids based on received value
         if (rxValue == "cycle_on") {
-          //          pCharacteristic->setValue("Cycle ON");
-          //          pCharacteristic->notify();
-          //          sendMessage("cycle_on");
-          //          fullyCycleTime = 360000;
-          //          interval = fullyCycleTime / 3 ;
-          //          pumpTime = 30000;
+      
           currentState = SOLENOID_A; // Start with solenoid A
           automationActive = true;  // Start the automation sequence
           Serial.println("Automation started: Power ON");
@@ -211,10 +209,11 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           pwmvalue = rxValue.substring(sep3 + 1).toInt();
           interval = fullyCycleTime / 3;
 
-          // Store values in non-volatile memory
-          preferences.putULong("cycleTime", fullyCycleTime);
-          preferences.putULong("pumpTime", pumpTime);
-          preferences.putUInt("pwmValue", pwmvalue);
+          // Store values in EEPROM
+          EEPROM.writeULong(CYCLE_TIME_ADDR, fullyCycleTime);
+          EEPROM.writeULong(PUMP_TIME_ADDR, pumpTime);
+          EEPROM.writeUInt(PUMP_SPEED_ADDR, pwmvalue);
+          EEPROM.commit();
 
           Serial.print("Stored Full Cycle Time: ");
           Serial.println(fullyCycleTime);
@@ -238,15 +237,31 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 
 void setup() {
   Serial.begin(115200);
-
-  // Open preferences with namespace "params"
-  preferences.begin("params", false);
-
-  // Retrieve stored values or use defaults if not found
-  fullyCycleTime = preferences.getULong("cycleTime", 360000);
-  pumpTime = preferences.putULong("pumpTime", 30000);
-  pwmvalue = preferences.getUInt("pwmValue", 255);
+  
+  // Initialize EEPROM
+  EEPROM.begin(EEPROM_SIZE);
+  
+  // Read stored values from EEPROM or use defaults
+  fullyCycleTime = EEPROM.readULong(CYCLE_TIME_ADDR);
+  if (fullyCycleTime == 0xFFFFFFFF) { // Check if EEPROM is empty
+    fullyCycleTime = 360000; // Default value
+  }
+  
+  pumpTime = EEPROM.readULong(PUMP_TIME_ADDR);
+  if (pumpTime == 0xFFFFFFFF) {
+    pumpTime = 30000;
+  }
+  
+  pwmvalue = EEPROM.readUInt(PUMP_SPEED_ADDR);
+  if (pwmvalue == 0xFFFF) {
+    pwmvalue = 255;
+  }
+  
   interval = fullyCycleTime / 3;
+  
+  Serial.println("initalSetup: " + String(fullyCycleTime));
+  Serial.println("initalSetup: " + String(pumpTime));
+  Serial.println("initalSetup: " + String(pwmvalue));
 
   // Initialize the GPIO pins for the solenoids
   pinMode(SOLENOID_A_PIN, OUTPUT);
@@ -334,11 +349,12 @@ void loop() {
     // Add longer delay between messages
     delay(5000);
     
-    // Format and send parameters
+    // Format and send parameters using String concatenation
     String params = 
-                    String(fullyCycleTime) + ";" + 
-                    String(pumpTime) + ";" + 
-                    String(pwmvalue);
+                   String(fullyCycleTime) + ";" + 
+                   String(pumpTime) + ";" + 
+                   String(pwmvalue) + ";" +
+                   String(automationActive);
                     
     Serial.println("Sending stored params: " + params);
     sendMessage(params.c_str());  // Convert to c-string for better compatibility
