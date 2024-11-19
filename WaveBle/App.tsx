@@ -46,6 +46,7 @@ const App = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isStoppingCycle, setIsStoppingCycle] = useState(false);
+  const [disconnectSubscription, setDisconnectSubscription] = useState<any>(null);
 
   useEffect(() => {
     const requestCameraPermission = async () => {
@@ -76,21 +77,20 @@ const App = () => {
 
     requestCameraPermission();
 
-
     const subscription = bleManager.onStateChange(async state => {
-
       if (state === 'PoweredOn') {
         console.log('BLE powered on');
         await requestPermissions();
       }
     }, true);
 
-    return () =>
+    return () => {
       subscription.remove();
-  }, [bleManager]
-  );
-
-
+      if (disconnectSubscription) {
+        disconnectSubscription.remove();
+      }
+    };
+  }, [bleManager, disconnectSubscription]);
 
   const requestPermissions = async () => {
     if (Platform.OS === 'ios') {
@@ -176,7 +176,36 @@ const App = () => {
     }
   };
 
+  const setupDisconnectListener = (device: Device) => {
+    if (disconnectSubscription) {
+      disconnectSubscription.remove();
+    }
 
+    const subscription = bleManager.onDeviceDisconnected(device.id, (error, disconnectedDevice) => {
+      console.log('Device disconnected:', disconnectedDevice?.name);
+      
+      if (error) {
+        console.log('Disconnection error:', error);
+        setIsConnected(false);
+        setConnectedDevice(null);
+        setDevices([]);
+        setSolAStatus('sola_on');
+        setSolBStatus('solb_on');
+        setSolCStatus('solc_on');
+        setPumpStatus('Pump_OFF');
+        setLedStatus('cycle_off');
+        setIsConnecting(false);
+        
+        Alert.alert(
+          'Device Disconnected',
+          'The connection to the device was lost. Please reconnect.',
+          [{ text: 'OK' }]
+        );
+      }
+    });
+
+    setDisconnectSubscription(subscription);
+  };
 
   const connect = async (device: Device) => {
     console.log('Connecting to device', device.id);
@@ -187,14 +216,13 @@ const App = () => {
       setConnectedDevice(connectedDevice);
       setIsModealVisible(true);
 
-      // Add delay of 2 second
+      setupDisconnectListener(connectedDevice);
+
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Discover services and characteristics
       await connectedDevice.discoverAllServicesAndCharacteristics();
       console.log('Services and characteristics discovered');
 
-      // Monitor characteristic
       bleManager.monitorCharacteristicForDevice(
         connectedDevice.id,
         SERVICE_UUID,
@@ -216,51 +244,37 @@ const App = () => {
     }
   };
 
-
-  // Function to handle BLE notification and update UI accordingly
   const handleNotification = (decodedValue: string) => {
     console.log('Raw notification received:', decodedValue);
     
-   
-      // console.log('Found stored_params message');
-      // console.log('Split params:', params);
-      
-      if ( decodedValue.split(';').length === 4) {
-        const params = decodedValue.split(';');
+    if ( decodedValue.split(';').length === 4) {
+      const params = decodedValue.split(';');
 
-        console.log('Correct number of parameters found');
-        const storedCycleTime = parseInt(params[0]) / 3000; // Convert to seconds and get half cycle time
-        const storedPumpTime = parseInt(params[1])/1000 ;  // Convert to seconds
-        const storedPumpSpeed = parseInt(params[2]);
-        const storedCycleStatus = params[3] === '1'; // Convert string to boolean
-        
-        console.log('Parsed values:');
-        console.log('Cycle Time:', storedCycleTime);
-        console.log('Pump Time:', storedPumpTime);
-        console.log('Pump Speed:', storedPumpSpeed);
-        console.log('Cycle Status:', storedCycleStatus);
-        
-        sethalfcycleValue(storedCycleTime);
-        setPumpTime(storedPumpTime);
-        setPumpSpeed(storedPumpSpeed);
-        setLedStatus(storedCycleStatus ? 'cycle_on' : 'cycle_off');
+      console.log('Correct number of parameters found');
+      const storedCycleTime = parseInt(params[0]) / 3000;
+      const storedPumpTime = parseInt(params[1])/1000 ;
+      const storedPumpSpeed = parseInt(params[2]);
+      const storedCycleStatus = params[3] === '1';
       
-      }
-    
+      console.log('Parsed values:');
+      console.log('Cycle Time:', storedCycleTime);
+      console.log('Pump Time:', storedPumpTime);
+      console.log('Pump Speed:', storedPumpSpeed);
+      console.log('Cycle Status:', storedCycleStatus);
+      
+      sethalfcycleValue(storedCycleTime);
+      setPumpTime(storedPumpTime);
+      setPumpSpeed(storedPumpSpeed);
+      setLedStatus(storedCycleStatus ? 'cycle_on' : 'cycle_off');
+    }
     
     if (decodedValue === 'Solenoid A ON') {
       setSolAStatus('sola_on');
-      // setSolBStatus('solb_off');
-      // setSolCStatus('solc_off');
     }
     if (decodedValue === 'Solenoid B ON') {
-      // setSolAStatus('sola_off');
       setSolBStatus('solb_on');
-      // setSolCStatus('solc_off');
     }
     if (decodedValue === 'Solenoid C ON') {
-      // setSolAStatus('sola_off');
-      // setSolBStatus('solb_off');
       setSolCStatus('solc_on');
     }
     if (decodedValue === 'Solenoid A OFF') {
@@ -280,11 +294,6 @@ const App = () => {
     }
     if (decodedValue === 'Cycle ON') {
       setLedStatus('cycle_on');
-      // setPumpStatus('Pump_ON');
-      // setSolAStatus('sola_off');
-      // setSolBStatus('solb_on');
-      // setSolCStatus('solc_on');
-
     }
     if (decodedValue === 'Cycle OFF') {
       setLedStatus('cycle_off');
@@ -349,18 +358,17 @@ const App = () => {
       return;
     }
     try {
+      if (disconnectSubscription) {
+        disconnectSubscription.remove();
+        setDisconnectSubscription(null);
+      }
+
       await bleManager.cancelDeviceConnection(connectedDevice.id);
       setIsConnected(false);
       setConnectedDevice(null);
-      // setSolAStatus('sola_off');
-      // setSolBStatus('solb_off');
-      // setSolCStatus('solc_off');
-      // setPumpStatus('Pump_OFF');
-      // setLedStatus('cycle_off'); // Reset cycle status
       setIsConnecting(false);
-      setDevices([]); // Clear devices list
+      setDevices([]);
       console.log('Disconnected from device', connectedDevice.name);
-
 
       Alert.alert('Device Disconnected', 'Successfully disconnected from the cushion.');
     } catch (error) {
@@ -372,7 +380,7 @@ const App = () => {
   const deviceDisconnected = () => {
     setIsConnected(false);
     setConnectedDevice(null);
-    setDevices([]); // Clear devices list
+    setDevices([]);
     Alert.alert('Device Disconnected', 'Successfully disconnected from the cushion.');
   }
 
@@ -414,7 +422,6 @@ const App = () => {
       console.log('Half Cycle:', halfcycleValue);
       console.log('Pump Time:', pumpTime);
 
-      // Add pump speed validation
       if (pumpSpeed < 0 || pumpSpeed > 255) {
         console.log('Invalid pump speed value');
         Alert.alert('Invalid pump speed', 'Pump speed must be between 0 and 255');
@@ -454,7 +461,6 @@ const App = () => {
     }
   };
 
-
   const handleCycleChange = (text: any) => {
     sethalfcycleValue(text);
     const fullCycle = text * 3;
@@ -465,9 +471,7 @@ const App = () => {
     setPumpTime(text);
   }
 
-
   const togglePump = async (status: string) => {
-
     if (!connectedDevice) {
       console.log('No device connected');
       Alert.alert('No device connected');
@@ -499,8 +503,6 @@ const App = () => {
         )
       })
   }
-
-
 
   const toggleSolA = async (status: string) => {
     if (!connectedDevice) {
@@ -604,14 +606,10 @@ const App = () => {
       })
   };
 
-
   const handlePumpSpeedChange = (value: number) => {
-    // Ensure value is within bounds
     const boundedValue = Math.min(Math.max(value, 0), 255);
     setPumpSpeed(boundedValue);
   };
-
-
 
   useEffect(() => {
     return () => {
@@ -642,9 +640,6 @@ const App = () => {
               <Text style={{ color: 'white', textAlign: 'center' }}>
                 {isConnected ? 'Connected' : 'Disconnected'}
               </Text>
-              {/* <Text style={{ color: 'white', textAlign: 'center' }}>
-                Cushion
-              </Text> */}
             </View>
             {!isConnected && (
               <Image
@@ -656,11 +651,7 @@ const App = () => {
 
           <TouchableOpacity
             onPress={() => {
-
-
-              // updateCycleTime(halfcycleValue*1000, pumpTime*1000);
               togglecycle(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on', halfcycleValue * 1000, pumpTime * 1000, pumpSpeed);
-
             }}
             style={[
               styles.mainButton,
