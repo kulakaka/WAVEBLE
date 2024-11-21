@@ -669,6 +669,7 @@ const App = () => {
           </TouchableOpacity>
         </View>
       </View>
+      <View style={styles.controlsContainer}>
       <Controlling
         isConnected={isConnected}
         pumpStatus={pumpStatus}
@@ -680,6 +681,8 @@ const App = () => {
         toggleSolB={toggleSolB}
         toggleSolC={toggleSolC}
       />
+      </View>
+    
       <View style={styles.controlsContainer}>
         <View style={styles.inputsRow}>
           <View style={styles.inputGroup}>
@@ -855,13 +858,13 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   controlsContainer: {
-    padding: 16,
-    marginTop: 10,
+    padding: 5,
+    marginTop: 0,
   },
   inputsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   inputGroup: {
     flex: 1,
@@ -897,12 +900,12 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-evenly',
-    marginTop: 30,
-    marginBottom: 10,
-    paddingHorizontal: 16, // Add padding to align with buttons below
+    marginTop: 15,
+    marginBottom: 5,
+    paddingHorizontal: 16,
   },
   mainButton: {
-    width: 160,
+    width: "45%",
     height: 60,
     backgroundColor: '#008080',
     padding: 10,
