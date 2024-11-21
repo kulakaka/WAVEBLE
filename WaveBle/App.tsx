@@ -30,9 +30,9 @@ const App = () => {
   const [isModealVisible, setIsModealVisible] = useState(false);
   const [ledStatus, setLedStatus] = useState('cycle_off');
   const [pumpStatus, setPumpStatus] = useState('Pump_OFF');
-  const [solAStatus, setSolAStatus] = useState('sola_on');
-  const [solBStatus, setSolBStatus] = useState('solb_on');
-  const [solCStatus, setSolCStatus] = useState('solc_on');
+  const [solAStatus, setSolAStatus] = useState<'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure'>('pressure');
+  const [solBStatus, setSolBStatus] = useState<'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure'>('pressure');
+  const [solCStatus, setSolCStatus] = useState<'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure'>('pressure');
 
   const [text, onChangeText] = React.useState("");
   const [outputText, setOutputText] = useState('Output will be displayed here...');
@@ -189,9 +189,9 @@ const App = () => {
         setIsConnected(false);
         setConnectedDevice(null);
         setDevices([]);
-        setSolAStatus('sola_on');
-        setSolBStatus('solb_on');
-        setSolCStatus('solc_on');
+        setSolAStatus('pressure');
+        setSolBStatus('pressure');
+        setSolCStatus('pressure');
         setPumpStatus('Pump_OFF');
         setLedStatus('cycle_off');
         setIsConnecting(false);
@@ -247,12 +247,11 @@ const App = () => {
   const handleNotification = (decodedValue: string) => {
     console.log('Raw notification received:', decodedValue);
     
-    if ( decodedValue.split(';').length === 4) {
+    if (decodedValue.split(';').length === 4) {
       const params = decodedValue.split(';');
-
       console.log('Correct number of parameters found');
       const storedCycleTime = parseInt(params[0]) / 3000;
-      const storedPumpTime = parseInt(params[1])/1000 ;
+      const storedPumpTime = parseInt(params[1])/1000;
       const storedPumpSpeed = parseInt(params[2]);
       const storedCycleStatus = params[3] === '1';
       
@@ -269,22 +268,77 @@ const App = () => {
     }
     
     if (decodedValue === 'Solenoid A ON') {
-      setSolAStatus('sola_on');
+      setSolAStatus('pressure');
     }
     if (decodedValue === 'Solenoid B ON') {
-      setSolBStatus('solb_on');
+      setSolBStatus('pressure');
     }
     if (decodedValue === 'Solenoid C ON') {
-      setSolCStatus('solc_on');
+      setSolCStatus('pressure');
     }
     if (decodedValue === 'Solenoid A OFF') {
-      setSolAStatus('sola_off');
+      setSolAStatus('vacuum');
     }
     if (decodedValue === 'Solenoid B OFF') {
-      setSolBStatus('solb_off');
+      setSolBStatus('vacuum');
     }
     if (decodedValue === 'Solenoid C OFF') {
-      setSolCStatus('solc_off');
+      setSolCStatus('vacuum');
+    }
+    if (decodedValue === 'Cycle A On') {
+      setPumpStatus('Pump_ON');
+      setSolAStatus('vacuum');
+      setSolBStatus('pressure');
+      setSolCStatus('pressure');
+      setLedStatus('cycle_on');
+    }
+    if (decodedValue === 'Cycle A OFF') {
+      setPumpStatus('Pump_OFF');
+      setSolAStatus('hold_vacuum');
+      setSolBStatus('hold_pressure');
+      setSolCStatus('hold_pressure');
+      setLedStatus('cycle_on');
+    }
+    if (decodedValue === 'Cycle B On') {
+      setPumpStatus('Pump_ON');
+      setSolAStatus('pressure');
+      setSolBStatus('vacuum');
+      setSolCStatus('pressure');
+      setLedStatus('cycle_on');
+    }
+    if (decodedValue === 'Cycle B OFF') {
+      setPumpStatus('Pump_OFF');
+      setSolAStatus('hold_pressure');
+      setSolBStatus('hold_vacuum');
+      setSolCStatus('hold_pressure');
+      setLedStatus('cycle_on');
+    }
+    if (decodedValue === 'Cycle C On') {
+      setPumpStatus('Pump_ON');
+      setSolAStatus('pressure');
+      setSolBStatus('pressure');
+      setSolCStatus('vacuum');
+      setLedStatus('cycle_on');
+    }
+    if (decodedValue === 'Cycle C OFF') {
+      setPumpStatus('Pump_OFF');
+      setSolAStatus('hold_pressure');
+      setSolBStatus('hold_pressure');
+      setSolCStatus('hold_vacuum');
+      setLedStatus('cycle_on');
+    }
+    if (decodedValue === 'Cycle OFF') {
+      setLedStatus('cycle_off');
+      setSolAStatus('pressure');
+      setSolBStatus('pressure');
+      setSolCStatus('pressure');
+      setPumpStatus('Pump_OFF');
+      setIsStoppingCycle(false);
+    }
+    if (decodedValue === 'setupFinished' || decodedValue === 'deenergies all') {
+      setSolAStatus('pressure');
+      setSolBStatus('pressure');
+      setSolCStatus('pressure');
     }
     if (decodedValue === 'Pump ON') {
       setPumpStatus('Pump_ON');
@@ -292,65 +346,6 @@ const App = () => {
     if (decodedValue === 'Pump OFF') {
       setPumpStatus('Pump_OFF');
     }
-    if (decodedValue === 'Cycle ON') {
-      setLedStatus('cycle_on');
-    }
-    if (decodedValue === 'Cycle OFF') {
-      setLedStatus('cycle_off');
-
-      setSolAStatus('sola_on');
-      setSolBStatus('solb_on');
-      setSolCStatus('solc_on');
-      setPumpStatus('Pump_OFF');
-      setIsStoppingCycle(false);
-    }
-    if (decodedValue === 'setupFinished') {
-      setSolAStatus('sola_on');
-      setSolBStatus('solb_on');
-      setSolCStatus('solc_on');
-    }
-    if (decodedValue === 'deenergies all') {
-      setSolAStatus('sola_on');
-      setSolBStatus('solb_on');
-      setSolCStatus('solc_on');
-    }
-    if (decodedValue === 'Cycle A On') {
-      setPumpStatus('Pump_ON');
-      setSolAStatus('sola_off');
-      setSolBStatus('solb_on');
-      setSolCStatus('solc_on');
-    }
-    if (decodedValue === 'Cycle A OFF') {
-      setPumpStatus('Pump_OFF');
-      setSolAStatus('sola_on');
-      setSolBStatus('solb_on');
-      setSolCStatus('solc_on');
-    }
-    if (decodedValue === 'Cycle B On') {
-      setPumpStatus('Pump_ON');
-      setSolAStatus('sola_on');
-      setSolBStatus('solb_off');
-      setSolCStatus('solc_on');
-    }
-    if (decodedValue === 'Cycle B OFF') {
-      setPumpStatus('Pump_OFF');
-      setSolAStatus('sola_on');
-      setSolBStatus('solb_on');
-      setSolCStatus('solc_on');
-    }
-    if (decodedValue === 'Cycle C On') {
-      setPumpStatus('Pump_ON');
-      setSolAStatus('sola_on');
-      setSolBStatus('solb_on');
-      setSolCStatus('solc_off');
-    }
-    if (decodedValue === 'Cycle C OFF') {
-      setPumpStatus('Pump_OFF');
-      setSolAStatus('sola_on');
-      setSolBStatus('solb_on');
-      setSolCStatus('solc_on');
-    }
-
   };
   const DisconnectFromDevice = async () => {
     if (!connectedDevice) {
@@ -475,7 +470,6 @@ const App = () => {
     if (!connectedDevice) {
       console.log('No device connected');
       Alert.alert('No device connected');
-
       return;
     }
 
@@ -508,51 +502,54 @@ const App = () => {
     if (!connectedDevice) {
       console.log('No device connected');
       Alert.alert('No device connected');
-
       return;
     }
 
-    bleManager.writeCharacteristicWithResponseForDevice(
-      connectedDevice.id,
-      SERVICE_UUID,
-      CHARACTERISTIC_UUID_TX,
-      base64.encode(status)
-    )
-
-      .then(() => {
-
-        bleManager.monitorCharacteristicForDevice(
-          connectedDevice.id,
-          SERVICE_UUID,
-          CHARACTERISTIC_UUID_TX,
-          (error, characteristic) => {
-            if (error) {
-              console.log('Error monitoring characteristic', error);
-              return;
+    try {
+      console.log('Sending solenoid A command:', status);
+      bleManager.writeCharacteristicWithResponseForDevice(
+        connectedDevice.id,
+        SERVICE_UUID,
+        CHARACTERISTIC_UUID_TX,
+        base64.encode(status)
+      )
+        .then(() => {
+  
+          bleManager.monitorCharacteristicForDevice(
+            connectedDevice.id,
+            SERVICE_UUID,
+            CHARACTERISTIC_UUID_TX,
+            (error, characteristic) => {
+              if (error) {
+                console.log('Error monitoring characteristic', error);
+                return;
+              }
+              const value = characteristic?.value;
+              const decodedValue = value ? base64.decode(value) : '';
+              handleNotification(decodedValue);
             }
-            const value = characteristic?.value;
-            const decodedValue = value ? base64.decode(value) : '';
-            handleNotification(decodedValue);
-          }
-        )
-      })
+          )
+        })
+      // State will be updated by handleNotification when server responds
+    } catch (error) {
+      console.log('Error sending solenoid A command:', error);
+      Alert.alert('Error', 'Failed to send command to device');
+    }
   };
 
   const toggleSolB = async (status: string) => {
     if (!connectedDevice) {
       console.log('No device connected');
       Alert.alert('No device connected');
-
       return;
     }
-    console.log('SolB Status:', status);
+
     bleManager.writeCharacteristicWithResponseForDevice(
       connectedDevice.id,
       SERVICE_UUID,
       CHARACTERISTIC_UUID_TX,
       base64.encode(status)
     )
-
       .then(() => {
 
         bleManager.monitorCharacteristicForDevice(
@@ -570,17 +567,15 @@ const App = () => {
           }
         )
       })
-
   };
 
   const toggleSolC = async (status: string) => {
     if (!connectedDevice) {
       console.log('No device connected');
       Alert.alert('No device connected');
-
       return;
     }
-    console.log('SolC Status:', status);
+
     bleManager.writeCharacteristicWithResponseForDevice(
       connectedDevice.id,
       SERVICE_UUID,
@@ -906,7 +901,7 @@ const styles = StyleSheet.create({
   mainButton: {
     width: 160,
     height: 60,
-    backgroundColor: 'blue',
+    backgroundColor: '#008080',
     padding: 10,
     borderRadius: 10,
     flexDirection: 'row',

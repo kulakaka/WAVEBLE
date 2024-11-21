@@ -50,7 +50,7 @@ void sendMessage(const char* message)
   Serial.println("Sending message: " + String(message));
   pCharacteristic->setValue(message);
   pCharacteristic->notify();
-  delay(100); // Add small delay after notification
+  delay(50); // Small delay between messages to prevent overrun
 }
 
 
@@ -229,11 +229,74 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           Serial.println("Automation started: Power ON");
         }
 
+        // Send immediate status updates after each command
+        if (rxValue == "pump_on") {
+            ledcWrite(PUMP_PIN, pwmvalue);
+            sendMessage("Pump ON");
+        }
+        else if (rxValue == "pump_off") {
+            ledcWrite(PUMP_PIN, 0);
+            sendMessage("Pump OFF");
+        }
       }
     }
 };
 
+// Add this new function to send current status
+void sendCurrentStatus() {
+    // Send current automation state
+    if (automationActive) {
+        sendMessage("Cycle ON");
+    } else {
+        sendMessage("Cycle OFF");
+    }
+    
+    // Send current solenoid states based on current state during automation
+    if (automationActive) {
+        switch (currentState) {
+            case SOLENOID_A:
+                sendMessage("Cycle A On");
+                break;
+            case SOLENOID_B:
+                sendMessage("Cycle B On");
+                break;
+            case SOLENOID_C:
+                sendMessage("Cycle C On");
+                break;
+        }
+    } else {
+        // Send individual solenoid states when not in automation
+        if (digitalRead(SOLENOID_A_PIN) == HIGH) {
+            sendMessage("Solenoid A OFF");
+        } else {
+            sendMessage("Solenoid A ON");
+        }
+        if (digitalRead(SOLENOID_B_PIN) == HIGH) {
+            sendMessage("Solenoid B OFF");
+        } else {
+            sendMessage("Solenoid B ON");
+        }
+        if (digitalRead(SOLENOID_C_PIN) == HIGH) {
+            sendMessage("Solenoid C OFF");
+        } else {
+            sendMessage("Solenoid C ON");
+        }
+    }
 
+    // Send pump status
+    if (ledcRead(PUMP_CHANNEL) > 0) {
+        sendMessage("Pump ON");
+    } else {
+        sendMessage("Pump OFF");
+    }
+
+    // Send current parameters
+    String params = String(fullyCycleTime) + ";" + 
+                   String(pumpTime) + ";" + 
+                   String(pwmvalue) + ";" +
+                   String(automationActive);
+    sendMessage(params.c_str());
+}
 
 void setup() {
   Serial.begin(115200);
@@ -325,16 +388,10 @@ void setup() {
 void loop() {
   // Disconnect handling
   if (!deviceConnected && oldDeviceConnected) {
-    delay(500); // Give the Bluetooth stack the chance to handle it
-    pServer->startAdvertising(); // Restart advertising
+    delay(500);
+    pServer->startAdvertising();
     Serial.println("Start advertising");
     oldDeviceConnected = deviceConnected;
-
-    //shutdown pump and all solenoids
-    digitalWrite(SOLENOID_A_PIN, LOW);  //  Deengergies solenoid A
-    digitalWrite(SOLENOID_B_PIN, LOW);  //  Deengergies solenoid B
-    digitalWrite(SOLENOID_C_PIN, LOW);  //  Deengergies solenoid C
-    ledcWrite(PUMP_PIN, 0);
   }
 
   // Connect handling
@@ -346,100 +403,96 @@ void loop() {
     sendMessage("setupFinished");
     Serial.println("Sent: setupFinished");
     
-    // Add longer delay between messages
-    delay(5000);
+    // Add delay between messages
+    delay(100);
     
-    // Format and send parameters using String concatenation
-    String params = 
-                   String(fullyCycleTime) + ";" + 
-                   String(pumpTime) + ";" + 
-                   String(pwmvalue) + ";" +
-                   String(automationActive);
-                    
-    Serial.println("Sending stored params: " + params);
-    sendMessage(params.c_str());  // Convert to c-string for better compatibility
-    Serial.println("Params sent");
+    // Send current status
+    sendCurrentStatus();
   }
-
-
 
   // Automate solenoid activation sequence
   if (automationActive) {
-
-    // Control the solenoids in sequence
     switch (currentState) {
-
       case SOLENOID_A:
-
         digitalWrite(SOLENOID_A_PIN, LOW);  //  Deengergies solenoid A
         digitalWrite(SOLENOID_B_PIN, HIGH);  //  Energies solenoid B
         digitalWrite(SOLENOID_C_PIN, HIGH);  //  Energies solenoid C
         ledcWrite(PUMP_PIN, pwmvalue);
-
+        
+        // Send status immediately after state change
         sendMessage("Cycle A On");
+        sendMessage("Pump ON");
 
         Serial.println("State A");
         delay(pumpTime);
+        
+        // Send status when pump turns off
         ledcWrite(PUMP_PIN, 0);
-        digitalWrite(SOLENOID_A_PIN, LOW);  //  Deengergies solenoid A
-        digitalWrite(SOLENOID_B_PIN, LOW);  //  Deengergies solenoid B
-        digitalWrite(SOLENOID_C_PIN, LOW);  //  Deengergies solenoid C
+        sendMessage("Pump OFF");
+        
+        digitalWrite(SOLENOID_A_PIN, LOW);
+        digitalWrite(SOLENOID_B_PIN, LOW);
+        digitalWrite(SOLENOID_C_PIN, LOW);
         sendMessage("Cycle A OFF");
 
         delay(interval - pumpTime);
-        currentState = SOLENOID_B;  // Move to next state
+        currentState = SOLENOID_B;
         break;
 
       case SOLENOID_B:
-        digitalWrite(SOLENOID_A_PIN, HIGH);   //  Energies solenoid A
-        digitalWrite(SOLENOID_B_PIN, LOW);  // Deengergies solenoid B
-        digitalWrite(SOLENOID_C_PIN, HIGH);  //  Energies solenoid C
+        digitalWrite(SOLENOID_A_PIN, HIGH);
+        digitalWrite(SOLENOID_B_PIN, LOW);
+        digitalWrite(SOLENOID_C_PIN, HIGH);
         ledcWrite(PUMP_PIN, pwmvalue);
-        Serial.println(pwmvalue);
-        Serial.println("Solenoid B ON");
-
+        
+        // Send status immediately after state change
         sendMessage("Cycle B On");
+        sendMessage("Pump ON");
+
         Serial.println("State B");
         delay(pumpTime);
-
+        
+        // Send status when pump turns off
         ledcWrite(PUMP_PIN, 0);
-        digitalWrite(SOLENOID_A_PIN, LOW);   //  Deengergies solenoid A
-        digitalWrite(SOLENOID_B_PIN, LOW);  // Deengergies solenoid B
-        digitalWrite(SOLENOID_C_PIN, LOW);  //  Deengergies solenoid C
+        sendMessage("Pump OFF");
+        
+        digitalWrite(SOLENOID_A_PIN, LOW);
+        digitalWrite(SOLENOID_B_PIN, LOW);
+        digitalWrite(SOLENOID_C_PIN, LOW);
         sendMessage("Cycle B OFF");
 
         delay(interval - pumpTime);
-        currentState = SOLENOID_C;  // Move to next state
+        currentState = SOLENOID_C;
         break;
 
       case SOLENOID_C:
-
-        digitalWrite(SOLENOID_A_PIN, HIGH);  // Energies on solenoid C
-        digitalWrite(SOLENOID_B_PIN, HIGH);  // Energies off solenoid C
-        digitalWrite(SOLENOID_C_PIN, LOW);  // Deengergies off solenoid C
+        digitalWrite(SOLENOID_A_PIN, HIGH);
+        digitalWrite(SOLENOID_B_PIN, HIGH);
+        digitalWrite(SOLENOID_C_PIN, LOW);
         ledcWrite(PUMP_PIN, pwmvalue);
-        Serial.println("Solenoid C ON");
-
+        
+        // Send status immediately after state change
         sendMessage("Cycle C On");
+        sendMessage("Pump ON");
+
         delay(pumpTime);
-
+        
+        // Send status when pump turns off
         ledcWrite(PUMP_PIN, 0);
-        digitalWrite(SOLENOID_A_PIN, LOW);   //  Deengergies solenoid A
-        digitalWrite(SOLENOID_B_PIN, LOW);  // Deengergies solenoid B
-        digitalWrite(SOLENOID_C_PIN, LOW);  //  Deengergies solenoid C
-
+        sendMessage("Pump OFF");
+        
+        digitalWrite(SOLENOID_A_PIN, LOW);
+        digitalWrite(SOLENOID_B_PIN, LOW);
+        digitalWrite(SOLENOID_C_PIN, LOW);
         sendMessage("Cycle C OFF");
 
         delay(interval - pumpTime);
-        currentState = SOLENOID_A;  // Loop back to solenoid A
+        currentState = SOLENOID_A;
         break;
 
       default:
-        currentState = SOLENOID_A;  // Default state
+        currentState = SOLENOID_A;
         break;
     }
-
-
-
   }
 };
