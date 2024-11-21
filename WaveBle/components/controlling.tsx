@@ -66,13 +66,13 @@ const Controlling: React.FC<ControllingProps> = ({
         <View style={styles.buttonTextContainer}>
           <Text style={[
             styles.buttonText,
-            { color: !isConnected ? 'white' : (pumpStatus === 'Pump_ON' ? 'white' : 'black') }
+            { color: !isConnected ? 'black' : (pumpStatus === 'Pump_ON' ? 'white' : 'black') }
           ]}>
             Pump
           </Text>
           <Text style={[
             styles.buttonText,
-            { color: !isConnected ? 'white' : (pumpStatus === 'Pump_ON' ? 'white' : 'black') }
+            { color: !isConnected ? 'black' : (pumpStatus === 'Pump_ON' ? 'white' : 'black') }
           ]}>
             {pumpStatus === 'Pump_ON' ? 'On' : 'Off'}
           </Text>
@@ -90,7 +90,10 @@ const Controlling: React.FC<ControllingProps> = ({
         ]}
         disabled={!isConnected || solAStatus === 'hold_vacuum' || solAStatus === 'hold_pressure'}
       >
-        <Text style={styles.buttonText}>
+        <Text style={[
+          styles.buttonText,
+          { color: !isConnected ? 'black' : (solAStatus === 'vacuum' || solAStatus === 'hold_vacuum' ? 'white' : 'black') }
+        ]}>
           {getZoneButtonText(solAStatus, 'A')}
         </Text>
       </TouchableOpacity>
@@ -106,7 +109,10 @@ const Controlling: React.FC<ControllingProps> = ({
         ]}
         disabled={!isConnected || solBStatus === 'hold_vacuum' || solBStatus === 'hold_pressure'}
       >
-        <Text style={styles.buttonText}>
+        <Text style={[
+          styles.buttonText,
+          { color: !isConnected ? 'black' : (solBStatus === 'vacuum' || solBStatus === 'hold_vacuum' ? 'white' : 'black') }
+        ]}>
           {getZoneButtonText(solBStatus, 'B')}
         </Text>
       </TouchableOpacity>
@@ -122,7 +128,10 @@ const Controlling: React.FC<ControllingProps> = ({
         ]}
         disabled={!isConnected || solCStatus === 'hold_vacuum' || solCStatus === 'hold_pressure'}
       >
-        <Text style={styles.buttonText}>
+        <Text style={[
+          styles.buttonText,
+          { color: !isConnected ? 'black' : (solCStatus === 'vacuum' || solCStatus === 'hold_vacuum' ? 'white' : 'black') }
+        ]}>
           {getZoneButtonText(solCStatus, 'C')}
         </Text>
       </TouchableOpacity>
@@ -139,7 +148,7 @@ const styles = StyleSheet.create({
   },
   controlButton: {
     width: 80,
-    height: 60,
+    height: 80,
     padding: 10,
     borderRadius: 10,
     justifyContent: 'center',
@@ -152,6 +161,7 @@ const styles = StyleSheet.create({
   buttonText: {
     textAlign: 'center',
     fontSize: 14,
+    lineHeight: 18,
   }
 });
 

@@ -3,14 +3,14 @@ import { View, Image, Text, StyleSheet } from 'react-native';
 
 const Header = () => {
   return (
-    <View style={styles.header}> 
+    <View>
       <View style={styles.logoContainer}>
         <Image
           source={require('../imgs/widelogo2.png')}
           style={styles.logo}
         />
       </View>
-      <Text style={styles.title}>Surf Cushion Controller</Text>
+      <Text style={styles.title}>Wheelchair Cushion Controller</Text>
     </View>
   );
 };
@@ -21,16 +21,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 10,
   },
-  header: {
-    backgroundColor: '#F6F0E6',
-  },
   logo: {
     width: '80%',
     height: 100,
     resizeMode: 'contain',
   },
   title: {
-    fontSize: 30,
+    fontSize: 20,
     textAlign: 'center',
     fontWeight: 'bold',
   },

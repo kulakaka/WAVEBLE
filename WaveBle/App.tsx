@@ -379,58 +379,61 @@ const App = () => {
     Alert.alert('Device Disconnected', 'Successfully disconnected from the cushion.');
   }
 
-  const togglecycle = async (status: string, halfcycleValue: number, pumpTime: number, pumpSpeed: number) => {
+  const togglecycle = async (status: string, halfcycleValue: number, pumpTime: number) => {
     console.log('Toggle Cycle:', status);
     if (!connectedDevice) {
       console.log('No device connected');
       Alert.alert('No device connected');
-      setOutputText(prevText => `${prevText}\n${'No device connected'}`)
       return;
     }
-    if (status === 'cycle_off') {
-      setIsStoppingCycle(true);
-      bleManager.writeCharacteristicWithResponseForDevice(
-        connectedDevice.id,
-        SERVICE_UUID,
-        CHARACTERISTIC_UUID_TX,
-        base64.encode("cycle_off")
-      )
-        .then(() => {
-          bleManager.monitorCharacteristicForDevice(
-            connectedDevice.id,
-            SERVICE_UUID,
-            CHARACTERISTIC_UUID_TX,
-            (error, characteristic) => {
-              if (error) {
-                console.log('Error monitoring characteristic', error);
-                setIsStoppingCycle(false);
-                return;
-              }
-              const value = characteristic?.value;
-              const decodedValue = value ? base64.decode(value) : '';
-              handleNotification(decodedValue);
-            }
-          )
-        })
-    }
+    
     if (status === 'cycle_on') {
       console.log('Half Cycle:', halfcycleValue);
       console.log('Pump Time:', pumpTime);
+      console.log('Pump Speed:', pumpSpeed);
 
-      if (pumpSpeed < 0 || pumpSpeed > 255) {
+      // Validate pump speed (1-10)
+      if (pumpSpeed < 1 || pumpSpeed > 10) {
         console.log('Invalid pump speed value');
-        Alert.alert('Invalid pump speed', 'Pump speed must be between 0 and 255');
+        Alert.alert(
+          'Invalid pump speed',
+          'Pump speed must be between 1 and 10',
+          [{ text: 'OK' }]
+        );
         return;
       }
 
-      if (halfcycleValue / 1000 >= 600 || pumpTime / 1000 >= 31) {
-        console.log('Invalid time values');
-        Alert.alert('Invalid time values');
+      // Validate half cycle time (45-3600 seconds)
+      const halfCycleSeconds = halfcycleValue/1000;
+      if (halfCycleSeconds < 45 || halfCycleSeconds > 3600) {
+        console.log('Invalid half cycle time');
+        Alert.alert('Invalid half cycle time', 'Half cycle time must be between 45 and 3600 seconds');
         return;
       }
+
+      // Validate pump time (10-30 seconds)
+      const pumpTimeSeconds = pumpTime/1000;
+      if (pumpTimeSeconds < 10 || pumpTimeSeconds > 30) {
+        console.log('Invalid pump time');
+        Alert.alert('Invalid pump time', 'Pump time must be between 10 and 30 seconds');
+        return;
+      }
+
+      // Validate pump time is less than half cycle time
+      if (pumpTimeSeconds >= halfCycleSeconds) {
+        console.log('Pump time must be less than half cycle time');
+        Alert.alert('Invalid pump time', 'Pump time must be less than half cycle time');
+        return;
+      }
+
+      // Calculate actual pump speed
+      const actualPumpSpeed = Math.round(2.5 * pumpSpeed + 230);
+      console.log('Actual Pump Speed:', actualPumpSpeed);
+
       const fullcycleValue = halfcycleValue * 3;
-      const timeMessage = `set_params;${fullcycleValue};${pumpTime};${pumpSpeed}`;
+      const timeMessage = `set_params;${fullcycleValue};${pumpTime};${actualPumpSpeed}`;
       console.log('Time Message:', timeMessage);
+      
       bleManager.writeCharacteristicWithResponseForDevice(
         connectedDevice.id,
         SERVICE_UUID,
@@ -646,7 +649,7 @@ const App = () => {
 
           <TouchableOpacity
             onPress={() => {
-              togglecycle(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on', halfcycleValue * 1000, pumpTime * 1000, pumpSpeed);
+              togglecycle(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on', halfcycleValue * 1000, pumpTime * 1000);
             }}
             style={[
               styles.mainButton,
@@ -686,7 +689,7 @@ const App = () => {
               onChangeText={(text) => handleCycleChange(text)}
               value={halfcycleValue.toString()}
             />
-            <Text style={styles.smallInputLabel}>Cycle Time (s)</Text>
+            <Text style={styles.smallInputLabel}>Cycle Time</Text>
           </View>
 
           <View style={styles.inputGroup}>
@@ -696,7 +699,7 @@ const App = () => {
               onChangeText={(text) => handlePumpChange(text)}
               value={pumpTime.toString()}
             />
-            <Text style={styles.smallInputLabel}>Pump Time (s)</Text>
+            <Text style={styles.smallInputLabel}>Pump Time</Text>
           </View>
 
           <View style={styles.inputGroup}>
