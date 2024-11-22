@@ -39,7 +39,7 @@ const App = () => {
   const [fullcycleValue, setfullcycleValue] = useState(0);
   const [halfcycleValue, sethalfcycleValue] = useState(120);
   const [pumpTime, setPumpTime] = useState(30);
-  const [pumpSpeed, setPumpSpeed] = useState(255);
+  const [pumpSpeed, setPumpSpeed] = useState(10);
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [cameraAuthorized, setCameraAuthorized] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -254,16 +254,19 @@ const App = () => {
       const storedPumpTime = parseInt(params[1])/1000;
       const storedPumpSpeed = parseInt(params[2]);
       const storedCycleStatus = params[3] === '1';
-      
+      const actualPumpSpeed = Math.round((storedPumpSpeed-230)/2.5);
+
       console.log('Parsed values:');
       console.log('Cycle Time:', storedCycleTime);
       console.log('Pump Time:', storedPumpTime);
-      console.log('Pump Speed:', storedPumpSpeed);
+      console.log('Pump Speed:', actualPumpSpeed);
       console.log('Cycle Status:', storedCycleStatus);
       
+
+
       sethalfcycleValue(storedCycleTime);
       setPumpTime(storedPumpTime);
-      setPumpSpeed(storedPumpSpeed);
+      setPumpSpeed(actualPumpSpeed);
       setLedStatus(storedCycleStatus ? 'cycle_on' : 'cycle_off');
     }
     
@@ -386,6 +389,33 @@ const App = () => {
       Alert.alert('No device connected');
       return;
     }
+
+    if (status === 'cycle_off') {
+      setIsStoppingCycle(true);
+      bleManager.writeCharacteristicWithResponseForDevice(
+        connectedDevice.id,
+        SERVICE_UUID,
+        CHARACTERISTIC_UUID_TX,
+        base64.encode("cycle_off")
+      )
+        .then(() => {
+          bleManager.monitorCharacteristicForDevice(
+            connectedDevice.id,
+            SERVICE_UUID,
+            CHARACTERISTIC_UUID_TX,
+            (error, characteristic) => {
+              if (error) {
+                console.log('Error monitoring characteristic', error);
+                setIsStoppingCycle(false);
+                return;
+              }
+              const value = characteristic?.value;
+              const decodedValue = value ? base64.decode(value) : '';
+              handleNotification(decodedValue);
+            }
+          )
+        })
+    }
     
     if (status === 'cycle_on') {
       console.log('Half Cycle:', halfcycleValue);
@@ -457,6 +487,8 @@ const App = () => {
           )
         })
     }
+    
+    
   };
 
   const handleCycleChange = (text: any) => {
