@@ -261,8 +261,6 @@ const App = () => {
       console.log('Pump Time:', storedPumpTime);
       console.log('Pump Speed:', actualPumpSpeed);
       console.log('Cycle Status:', storedCycleStatus);
-      
-
 
       sethalfcycleValue(storedCycleTime);
       setPumpTime(storedPumpTime);
