@@ -265,22 +265,22 @@ void sendCurrentStatus() {
     if (automationActive) {
         switch (currentState) {
             case SOLENOID_A_ON:
-                sendMessage("Cycle C OFF");
-                break;
-            case SOLENOID_A_OFF:
                 sendMessage("Cycle A On");
                 break;
-            case SOLENOID_B_ON:
+            case SOLENOID_A_OFF:
                 sendMessage("Cycle A OFF");
                 break;
-            case SOLENOID_B_OFF:
+            case SOLENOID_B_ON:
                 sendMessage("Cycle B On");
                 break;
-            case SOLENOID_C_ON:
+            case SOLENOID_B_OFF:
                 sendMessage("Cycle B OFF");
                 break;
-            case SOLENOID_C_OFF:
+            case SOLENOID_C_ON:
                 sendMessage("Cycle C On");
+                break;
+            case SOLENOID_C_OFF:
+                sendMessage("Cycle C OFF");
                 break;
         }
     } else {
@@ -401,9 +401,7 @@ void setup() {
 
 
 void loop() {
-
-  unsigned long currentMillis = millis(); 
-
+  unsigned long currentMillis = millis();
 
   // Disconnect handling
   if (!deviceConnected && oldDeviceConnected) {
@@ -417,88 +415,97 @@ void loop() {
   if (deviceConnected && !oldDeviceConnected) {
     Serial.println("Device connected");
     oldDeviceConnected = deviceConnected;
-    
-    // Send setupFinished first
     sendMessage("setupFinished");
     Serial.println("Sent: setupFinished");
-    
-    // Add delay between messages
     delay(100);
-    
-    
   }
+
   // Automate solenoid activation sequence
   if (automationActive) {
+    // Initialize if in OFF state
     if (currentState == OFF) {
-        previousMillis = millis() - interval;  // Force immediate first cycle
-        currentState = SOLENOID_A_ON;
+      previousMillis = currentMillis;  // Start interval timing
+      previousPumpTime = currentMillis; // Start pump timing
+      currentState = SOLENOID_A_ON;
+      
+      // Set initial solenoid state and start pump
+      digitalWrite(SOLENOID_A_PIN, LOW);
+      digitalWrite(SOLENOID_B_PIN, HIGH);
+      digitalWrite(SOLENOID_C_PIN, HIGH);
+      ledcWrite(PUMP_PIN, pwmvalue);
+      sendMessage("Cycle A On");
+      Serial.println("State A ON");
     }
-    
     sendCurrentStatus();
-    // Check if it's time to change the state
-    if (currentMillis - previousMillis >= interval) {
-      previousMillis = currentMillis;
-
+    // Check if pump should be turned off (pump time reached within current interval)
+    if ((currentState == SOLENOID_A_ON || currentState == SOLENOID_B_ON || currentState == SOLENOID_C_ON) && 
+        (currentMillis - previousPumpTime >= pumpTime)) {
+      // Turn off pump and change to OFF state for current solenoid
+      ledcWrite(PUMP_PIN, 0);
+      sendMessage("Pump OFF");
+      
       switch (currentState) {
         case SOLENOID_A_ON:
-          digitalWrite(SOLENOID_A_PIN, LOW);
-          digitalWrite(SOLENOID_B_PIN, HIGH);
-          digitalWrite(SOLENOID_C_PIN, HIGH);
-          ledcWrite(PUMP_PIN, pwmvalue);
-          sendMessage("Cycle A On");
-          Serial.println("State A ON");
           currentState = SOLENOID_A_OFF;
-          previousMillis = currentMillis;
-          break;
-
-        case SOLENOID_A_OFF:
-          ledcWrite(PUMP_PIN, 0);
           sendMessage("Cycle A OFF");
-          Serial.println("State A OFF");
-          currentState = SOLENOID_B_ON;
           break;
-
         case SOLENOID_B_ON:
+          currentState = SOLENOID_B_OFF;
+          sendMessage("Cycle B OFF");
+          break;
+        case SOLENOID_C_ON:
+          currentState = SOLENOID_C_OFF;
+          sendMessage("Cycle C OFF");
+          break;
+      }
+    }
+
+    // Check if interval time is reached (time to move to next solenoid)
+    if (currentMillis - previousMillis >= interval) {
+      previousMillis = currentMillis;   // Reset interval timer
+      previousPumpTime = currentMillis; // Reset pump timer for new cycle
+      
+      // Determine next state based on current state
+      switch (currentState) {
+        case SOLENOID_A_ON:
+        case SOLENOID_A_OFF:
+          // Move to Zone B
           digitalWrite(SOLENOID_A_PIN, HIGH);
           digitalWrite(SOLENOID_B_PIN, LOW);
           digitalWrite(SOLENOID_C_PIN, HIGH);
           ledcWrite(PUMP_PIN, pwmvalue);
           sendMessage("Cycle B On");
+          sendMessage("Pump ON");
           Serial.println("State B ON");
-          currentState = SOLENOID_B_OFF;
-          previousMillis = currentMillis;
+          currentState = SOLENOID_B_ON;
           break;
 
+        case SOLENOID_B_ON:
         case SOLENOID_B_OFF:
-          ledcWrite(PUMP_PIN, 0);
-          sendMessage("Cycle B OFF");
-          Serial.println("State B OFF");
-          currentState = SOLENOID_C_ON;
-          break;
-
-        case SOLENOID_C_ON:
+          // Move to Zone C
           digitalWrite(SOLENOID_A_PIN, HIGH);
           digitalWrite(SOLENOID_B_PIN, HIGH);
           digitalWrite(SOLENOID_C_PIN, LOW);
           ledcWrite(PUMP_PIN, pwmvalue);
           sendMessage("Cycle C On");
+          sendMessage("Pump ON");
           Serial.println("State C ON");
-          currentState = SOLENOID_C_OFF;
-          previousMillis = currentMillis;
+          currentState = SOLENOID_C_ON;
           break;
 
+        case SOLENOID_C_ON:
         case SOLENOID_C_OFF:
-          ledcWrite(PUMP_PIN, 0);
-          sendMessage("Cycle C OFF");
-          Serial.println("State C OFF");
-          currentState = SOLENOID_A_ON;  // Back to start
-          break;
-
-        default:
+          // Move back to Zone A
+          digitalWrite(SOLENOID_A_PIN, LOW);
+          digitalWrite(SOLENOID_B_PIN, HIGH);
+          digitalWrite(SOLENOID_C_PIN, HIGH);
+          ledcWrite(PUMP_PIN, pwmvalue);
+          sendMessage("Cycle A On");
+          sendMessage("Pump ON");
+          Serial.println("State A ON");
           currentState = SOLENOID_A_ON;
           break;
       }
     }
-   
   }
-};
+}

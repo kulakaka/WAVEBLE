@@ -92,6 +92,7 @@ const App = () => {
     };
   }, [bleManager, disconnectSubscription]);
 
+  // Request necessary permissions for BLE operations
   const requestPermissions = async () => {
     if (Platform.OS === 'ios') {
       return true;
@@ -123,6 +124,7 @@ const App = () => {
     return false;
   };
 
+  // Scan for a device using a QR code and connect to it
   const scanQrAndConnect = (qr: string) => {
     setIsSearching(true);
 
@@ -176,6 +178,7 @@ const App = () => {
     }
   };
 
+  // Setup a listener for device disconnection
   const setupDisconnectListener = (device: Device) => {
     if (disconnectSubscription) {
       disconnectSubscription.remove();
@@ -207,6 +210,7 @@ const App = () => {
     setDisconnectSubscription(subscription);
   };
 
+  // Connect to a device
   const connect = async (device: Device) => {
     console.log('Connecting to device', device.id);
     try {
@@ -244,6 +248,7 @@ const App = () => {
     }
   };
 
+  // Handle notifications from the device firmware
   const handleNotification = (decodedValue: string) => {
     console.log('Raw notification received:', decodedValue);
     
@@ -348,6 +353,8 @@ const App = () => {
       setPumpStatus('Pump_OFF');
     }
   };
+
+  // Disconnect from the currently connected device
   const DisconnectFromDevice = async () => {
     if (!connectedDevice) {
       console.log('No device currently connected');
@@ -373,13 +380,7 @@ const App = () => {
     }
   };
 
-  const deviceDisconnected = () => {
-    setIsConnected(false);
-    setConnectedDevice(null);
-    setDevices([]);
-    Alert.alert('Device Disconnected', 'Successfully disconnected from the cushion.');
-  }
-
+  
   const togglecycle = async (status: string, halfcycleValue: number, pumpTime: number) => {
     console.log('Toggle Cycle:', status);
     if (!connectedDevice) {
