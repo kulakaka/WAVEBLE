@@ -16,6 +16,10 @@ import Slider from '@react-native-community/slider';
 import { RNCamera } from 'react-native-camera';
 import Header from './components/header';
 import Controlling from './components/controlling';
+import { WaveCushionSVG } from './components/waveCushionSVG';
+
+// import CushionAnimation from './components/CushionAnimation';
+
 const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 const CHARACTERISTIC_UUID_TX = "db000752-8165-4eca-bcbd-8cad0f11127c"
 
@@ -747,6 +751,14 @@ const App = () => {
           </View>
         </View>
 
+        {/* <CushionAnimation
+          solAStatus={solAStatus}
+          solBStatus={solBStatus}
+          solCStatus={solCStatus}
+        /> */}
+        <View style={styles.waveContainer}>
+          <WaveCushionSVG/>
+        </View>
       </View>
 
       {isScannerVisible && (
@@ -809,6 +821,11 @@ const styles = StyleSheet.create({
     padding: 10,
     marginVertical: 10,
   },
+  waveContainer: {
+    height: "60%",
+    width: "100%",
+  },
+
   input: {
     height: 40,
     margin: 12,

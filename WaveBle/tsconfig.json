@@ -1,3 +1,8 @@
 {
-  "extends": "@react-native/typescript-config/tsconfig.json"
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "include": [
+    "src/**/*",            // Adjust this path based on your project structure
+    "components/**/*",     // Include the components directory
+    "App.tsx"  
+  ]
 }
