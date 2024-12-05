@@ -16,7 +16,6 @@ import Slider from '@react-native-community/slider';
 import { RNCamera } from 'react-native-camera';
 import Header from './components/header';
 import Controlling from './components/controlling';
-import { WaveCushionSVG } from './components/waveCushionSVG';
 
 // import CushionAnimation from './components/CushionAnimation';
 
@@ -757,7 +756,6 @@ const App = () => {
           solCStatus={solCStatus}
         /> */}
         <View style={styles.waveContainer}>
-          <WaveCushionSVG/>
         </View>
       </View>
 
