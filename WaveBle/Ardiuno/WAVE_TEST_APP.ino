@@ -110,8 +110,8 @@ class MyCallbacks : public BLECharacteristicCallbacks {
           digitalWrite(SOLENOID_B_PIN, LOW);  //  Deengergies solenoid B
           digitalWrite(SOLENOID_C_PIN, LOW);  //  Deengergies solenoid C
 
+          currentState = SOLENOID_A_ON; // Start with solenoid A
           automationActive = false;  // Stop automation
-          currentState = OFF;
           Serial.println("All Solenoids OFF");
 
           // Notify the connected device
@@ -234,7 +234,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 
           sendMessage("Cycle ON");
           sendMessage("Cycle A On");
-          currentState = OFF;
+          currentState = SOLENOID_A_ON;
           automationActive = true;
           Serial.println("Automation started: Power ON");
         }
@@ -442,9 +442,6 @@ void loop() {
         (currentMillis - previousPumpTime >= pumpTime)) {
       // Turn off pump and change to OFF state for current solenoid
       ledcWrite(PUMP_PIN, 0);
-      digitalWrite(SOLENOID_A_PIN, LOW);
-      digitalWrite(SOLENOID_B_PIN, LOW);
-      digitalWrite(SOLENOID_C_PIN, LOW);
       sendMessage("Pump OFF");
       
       switch (currentState) {
