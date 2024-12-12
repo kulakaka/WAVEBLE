@@ -16,8 +16,7 @@ import Slider from '@react-native-community/slider';
 import { RNCamera } from 'react-native-camera';
 import Header from './components/header';
 import Controlling from './components/controlling';
-
-// import CushionAnimation from './components/CushionAnimation';
+import CushionAnimation from './components/CushionAnimation';
 
 const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 const CHARACTERISTIC_UUID_TX = "db000752-8165-4eca-bcbd-8cad0f11127c"
@@ -32,7 +31,7 @@ const App = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isModealVisible, setIsModealVisible] = useState(false);
   const [ledStatus, setLedStatus] = useState('cycle_off');
-  const [pumpStatus, setPumpStatus] = useState('Pump_OFF');
+  const [pumpStatus, setPumpStatus] = useState<'Pump_ON' | 'Pump_OFF'>('Pump_OFF');
   const [solAStatus, setSolAStatus] = useState<'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure'>('pressure');
   const [solBStatus, setSolBStatus] = useState<'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure'>('pressure');
   const [solCStatus, setSolCStatus] = useState<'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure'>('pressure');
@@ -50,6 +49,7 @@ const App = () => {
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isStoppingCycle, setIsStoppingCycle] = useState(false);
   const [disconnectSubscription, setDisconnectSubscription] = useState<any>(null);
+  const [currentZone, setCurrentZone] = useState<'A' | 'B' | 'C' | null>(null);
 
   useEffect(() => {
     const requestCameraPermission = async () => {
@@ -300,6 +300,7 @@ const App = () => {
       setSolBStatus('pressure');
       setSolCStatus('pressure');
       setLedStatus('cycle_on');
+      setCurrentZone('A');
     }
     if (decodedValue === 'Cycle A OFF') {
       setPumpStatus('Pump_OFF');
@@ -307,6 +308,7 @@ const App = () => {
       setSolBStatus('hold_pressure');
       setSolCStatus('hold_pressure');
       setLedStatus('cycle_on');
+      setCurrentZone('A');
     }
     if (decodedValue === 'Cycle B On') {
       setPumpStatus('Pump_ON');
@@ -314,6 +316,7 @@ const App = () => {
       setSolBStatus('vacuum');
       setSolCStatus('pressure');
       setLedStatus('cycle_on');
+      setCurrentZone('B');
     }
     if (decodedValue === 'Cycle B OFF') {
       setPumpStatus('Pump_OFF');
@@ -321,6 +324,7 @@ const App = () => {
       setSolBStatus('hold_vacuum');
       setSolCStatus('hold_pressure');
       setLedStatus('cycle_on');
+      setCurrentZone('B');
     }
     if (decodedValue === 'Cycle C On') {
       setPumpStatus('Pump_ON');
@@ -328,6 +332,7 @@ const App = () => {
       setSolBStatus('pressure');
       setSolCStatus('vacuum');
       setLedStatus('cycle_on');
+      setCurrentZone('C');
     }
     if (decodedValue === 'Cycle C OFF') {
       setPumpStatus('Pump_OFF');
@@ -335,6 +340,7 @@ const App = () => {
       setSolBStatus('hold_pressure');
       setSolCStatus('hold_vacuum');
       setLedStatus('cycle_on');
+      setCurrentZone('C');
     }
     if (decodedValue === 'Cycle OFF') {
       setLedStatus('cycle_off');
@@ -343,6 +349,7 @@ const App = () => {
       setSolCStatus('pressure');
       setPumpStatus('Pump_OFF');
       setIsStoppingCycle(false);
+      setCurrentZone(null);
     }
     if (decodedValue === 'setupFinished' || decodedValue === 'deenergies all') {
       setSolAStatus('pressure');
@@ -750,12 +757,13 @@ const App = () => {
           </View>
         </View>
 
-        {/* <CushionAnimation
-          solAStatus={solAStatus}
-          solBStatus={solBStatus}
-          solCStatus={solCStatus}
-        /> */}
         <View style={styles.waveContainer}>
+          <CushionAnimation
+            isPlaying={ledStatus === 'cycle_on'}
+            currentZone={currentZone}
+            pumpStatus={pumpStatus}
+            pumpTime={pumpTime * 1000}
+          />
         </View>
       </View>
 
