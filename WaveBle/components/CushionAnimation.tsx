@@ -24,21 +24,18 @@ interface CushionAnimationProps {
   isPlaying: boolean;
   currentZone: 'A' | 'B' | 'C' | null;
   pumpStatus: 'Pump_ON' | 'Pump_OFF';
-  pumpTime: number;
+  pumpPressureTime: number;
+  pumpVacuumTime: number;
 }
 
 const CushionAnimation: React.FC<CushionAnimationProps> = ({
   isPlaying,
   currentZone,
   pumpStatus,
-  pumpTime,
+  pumpPressureTime,
+  pumpVacuumTime,
 }) => {
   const [currentFrame, setCurrentFrame] = useState(1);
-  const [zoneFrames, setZoneFrames] = useState<Record<'A' | 'B' | 'C', number>>({
-    A: 1,
-    B: 1,
-    C: 1,
-  });
   const animationTimer = useRef<NodeJS.Timeout | null>(null);
   const previousZoneRef = useRef<'A' | 'B' | 'C' | null>(null);
 
@@ -48,81 +45,67 @@ const CushionAnimation: React.FC<CushionAnimationProps> = ({
   };
 
   useEffect(() => {
-    // Reset everything when cycle stops
-    if (!isPlaying) {
-      setCurrentFrame(1);
-      setZoneFrames({ A: 1, B: 1, C: 1 });
-      previousZoneRef.current = null;
-      if (animationTimer.current) {
-        clearInterval(animationTimer.current);
-      }
-      return;
-    }
+    console.log('Animation State:', { isPlaying, currentZone, pumpStatus, currentFrame });
 
-    // Handle zone changes
-    if (currentZone && currentZone !== previousZoneRef.current) {
-      setCurrentFrame(1); // Start from first frame when zone changes
-      previousZoneRef.current = currentZone;
-    }
-
-    // Handle animation when pump is on
-    if (pumpStatus === 'Pump_ON' && currentZone) {
-      const frameDuration = pumpTime / 5;
-      
-      if (animationTimer.current) {
-        clearInterval(animationTimer.current);
-      }
+    const startAnimation = () => {
+      const totalCycleTime = pumpPressureTime + pumpVacuumTime + 22000;
+      const frameInterval = Math.floor(totalCycleTime / 4); // 4 transitions for 5 frames
+      console.log('Animation timing:', { totalCycleTime, frameInterval });
 
       animationTimer.current = setInterval(() => {
         setCurrentFrame(prevFrame => {
           const nextFrame = prevFrame >= 5 ? 5 : prevFrame + 1;
-          // Update the frame for the current zone
-          setZoneFrames(prev => ({
-            ...prev,
-            [currentZone]: nextFrame
-          }));
+          console.log('Frame transition:', { prevFrame, nextFrame });
           return nextFrame;
         });
-      }, frameDuration);
+      }, frameInterval);
+    };
 
-      return () => {
-        if (animationTimer.current) {
-          clearInterval(animationTimer.current);
-        }
-      };
-    } else if (pumpStatus === 'Pump_OFF' && currentZone) {
-      // When pump stops, clear the timer but keep the current frame
+    const stopAnimation = () => {
       if (animationTimer.current) {
         clearInterval(animationTimer.current);
+        animationTimer.current = null;
       }
+    };
+
+    // Reset animation when stopping or changing zones
+    if (!isPlaying || !currentZone) {
+      stopAnimation();
+      setCurrentFrame(1);
+      previousZoneRef.current = null;
+      return;
     }
-  }, [isPlaying, currentZone, pumpStatus, pumpTime]);
+
+    // Handle zone changes
+    if (currentZone !== previousZoneRef.current) {
+      console.log('Zone changed:', { from: previousZoneRef.current, to: currentZone });
+      stopAnimation();
+      setCurrentFrame(1);
+      previousZoneRef.current = currentZone;
+    }
+
+    // Start or stop animation based on pump status
+    if (pumpStatus === 'Pump_ON') {
+      stopAnimation(); // Clear any existing animation
+      startAnimation();
+    } else {
+      stopAnimation();
+      setCurrentFrame(5); // Set to final frame when pump is off
+    }
+
+    return () => {
+      stopAnimation();
+    };
+  }, [isPlaying, currentZone, pumpStatus, pumpPressureTime, pumpVacuumTime]);
 
   const getCurrentImage = () => {
-    if (!isPlaying) {
-      return images.A1; // Default image
-    }
-    
-    if (!currentZone) {
+    if (!isPlaying || !currentZone) {
       return images.A1;
     }
-
-    try {
-      const imageSource = getImageSource(currentZone, currentFrame);
-      console.log('Loading image:', currentZone, currentFrame, imageSource); // Debug log
-      return imageSource;
-    } catch (error) {
-      console.error('Error loading image:', error);
-      return images.A1; // Fallback to default image
-    }
+    
+    console.log('Getting image for:', { currentZone, currentFrame });
+    return getImageSource(currentZone, currentFrame);
   };
-
-  useEffect(() => {
-    console.log('Testing image loading...');
-    Object.entries(images).forEach(([key, source]) => {
-      console.log(`Testing image ${key}:`, source);
-    });
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -130,7 +113,6 @@ const CushionAnimation: React.FC<CushionAnimationProps> = ({
         source={getCurrentImage()}
         style={styles.image}
         resizeMode="contain"
-        onError={(error) => console.error('Image loading error:', error.nativeEvent.error)} // Add error handler
       />
     </View>
   );

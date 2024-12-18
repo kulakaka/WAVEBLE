@@ -344,18 +344,21 @@ const App = () => {
       setSolAStatus('vaccum');
       setSolBStatus('hold');
       setSolCStatus('pressure');
+      setCurrentZone('A');
     }
     if (decodedValue === 'PVH') {
       setPumpStatus('Pump_ON');
       setSolAStatus('pressure');
       setSolBStatus('vaccum');
       setSolCStatus('hold');
+      setCurrentZone('B');
     }
     if (decodedValue === 'HPV') {
       setPumpStatus('Pump_ON');
       setSolAStatus('hold');
       setSolBStatus('pressure');
       setSolCStatus('vaccum');
+      setCurrentZone('C');
     }
     if (decodedValue === 'HOLD') {
       setSolAStatus('hold');
@@ -765,7 +768,8 @@ const App = () => {
             isPlaying={ledStatus === 'cycle_on'}
             currentZone={currentZone}
             pumpStatus={pumpStatus}
-            pumpTime={pumpPressureTime * 1000}
+            pumpPressureTime={pumpPressureTime * 1000}
+            pumpVacuumTime={pumpVaccumTime * 1000}
           />
         </View>
       </View>
