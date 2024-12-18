@@ -117,7 +117,7 @@ const Controlling: React.FC<ControllingProps> = ({
 
       <TouchableOpacity
          onPress={() => {
-          const nextState = getNextState(solAStatus);
+          const nextState = getNextState(solBStatus);
           toggleSolB(nextState);
         }}
         style={[
@@ -139,7 +139,7 @@ const Controlling: React.FC<ControllingProps> = ({
 
       <TouchableOpacity
         onPress={() => {
-          const nextState = getNextState(solAStatus);
+          const nextState = getNextState(solCStatus);
           toggleSolC(nextState);
         }}
         style={[

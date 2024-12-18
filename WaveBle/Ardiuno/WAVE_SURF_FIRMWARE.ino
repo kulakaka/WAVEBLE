@@ -204,7 +204,7 @@ class MyCallbacks: public BLECharacteristicCallbacks {
             digitalWrite(AINPin, LOW);
             digitalWrite(SBVPin, HIGH);
             digitalWrite(AOUPin, HIGH);
-            sendMessage("B Vacuum");
+            sendMessage("B Vaccum");
         }
         if (rxValue == "b_hold")
         {
@@ -228,7 +228,7 @@ class MyCallbacks: public BLECharacteristicCallbacks {
             digitalWrite(AINPin, LOW);
             digitalWrite(SCVPin, HIGH);
             digitalWrite(AOUPin, HIGH);
-            sendMessage("C Vacuum");
+            sendMessage("C Vaccum");
         }
         if (rxValue == "c_hold")
         {
