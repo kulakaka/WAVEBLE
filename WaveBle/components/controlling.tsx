@@ -4,38 +4,52 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 interface ControllingProps {
   isConnected: boolean;
   pumpStatus: string;
-  solAStatus: 'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure';
-  solBStatus: 'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure';
-  solCStatus: 'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure';
+  solAStatus: 'pressure' | 'vaccum' | 'hold';
+  solBStatus: 'pressure' | 'vaccum' | 'hold';
+  solCStatus: 'pressure' | 'vaccum' | 'hold';
   togglePump: (status: string) => void;
   toggleSolA: (status: string) => void;
   toggleSolB: (status: string) => void;
   toggleSolC: (status: string) => void;
 }
 
-const getZoneButtonColor = (status: 'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure', isConnected: boolean) => {
+const getZoneButtonColor = (status: 'pressure' | 'vaccum' | 'hold', isConnected: boolean) => {
   if (!isConnected) return '#808080';
   switch(status) {
-    case 'vacuum':
-    case 'hold_vacuum':
-      return '#008080'; // Blue for vacuum states
+    case 'vaccum':
+      return '#4169E1'; // Royal Blue
+    case 'pressure':
+      return '#DC143C'; // Crimson
+    case 'hold':
+      return '#3CB371'; // Medium Sea Green
     default:
-      return '#808080'; // Grey for other states
+      return '#808080';
   }
 };
 
-const getZoneButtonText = (status: 'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure', zone: string) => {
+const getZoneButtonText = (status: 'pressure' | 'vaccum' | 'hold', zone: string) => {
   switch(status) {
     case 'pressure':
-      return `Zone ${zone} Pressure`;
-    case 'vacuum':
-      return `Zone ${zone} Vacuum`;
-    case 'hold_vacuum':
-      return `Zone ${zone} Hold Vacuum`;
-    case 'hold_pressure':
-      return `Zone ${zone} Hold Pressure`;
+      return `${zone}\nPressure`;
+    case 'vaccum':
+      return `${zone}\nVacuum`;
+    case 'hold':
+      return `${zone}\nHold`;
     default:
       return `Zone ${zone}`;
+  }
+};
+
+const getNextState = (currentStatus: 'pressure' | 'vaccum' | 'hold') => {
+  switch(currentStatus) {
+    case 'vaccum':
+      return 'hold';
+    case 'hold':
+      return 'pressure';
+    case 'pressure':
+      return 'vaccum';
+    default:
+      return 'hold';
   }
 };
 
@@ -80,7 +94,10 @@ const Controlling: React.FC<ControllingProps> = ({
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => toggleSolA(solAStatus === 'pressure' ? 'sola_off' : 'sola_on')}
+        onPress={() => {
+          const nextState = getNextState(solAStatus);
+          toggleSolA(nextState);
+        }}
         style={[
           styles.controlButton,
           {
@@ -88,18 +105,21 @@ const Controlling: React.FC<ControllingProps> = ({
             opacity: !isConnected ? 0.5 : 1
           }
         ]}
-        disabled={!isConnected || solAStatus === 'hold_vacuum' || solAStatus === 'hold_pressure'}
+        disabled={!isConnected}
       >
         <Text style={[
           styles.buttonText,
-          { color: !isConnected ? 'black' : (solAStatus === 'vacuum' || solAStatus === 'hold_vacuum' ? 'white' : 'black') }
+          { color: !isConnected ? 'black' : 'white' }
         ]}>
           {getZoneButtonText(solAStatus, 'A')}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => toggleSolB(solBStatus === 'pressure' ? 'solb_off' : 'solb_on')}
+         onPress={() => {
+          const nextState = getNextState(solAStatus);
+          toggleSolB(nextState);
+        }}
         style={[
           styles.controlButton,
           {
@@ -107,18 +127,21 @@ const Controlling: React.FC<ControllingProps> = ({
             opacity: !isConnected ? 0.5 : 1
           }
         ]}
-        disabled={!isConnected || solBStatus === 'hold_vacuum' || solBStatus === 'hold_pressure'}
+        disabled={!isConnected}
       >
         <Text style={[
           styles.buttonText,
-          { color: !isConnected ? 'black' : (solBStatus === 'vacuum' || solBStatus === 'hold_vacuum' ? 'white' : 'black') }
+          { color: !isConnected ? 'black' : 'white' }
         ]}>
           {getZoneButtonText(solBStatus, 'B')}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => toggleSolC(solCStatus === 'pressure' ? 'solc_off' : 'solc_on')}
+        onPress={() => {
+          const nextState = getNextState(solAStatus);
+          toggleSolC(nextState);
+        }}
         style={[
           styles.controlButton,
           {
@@ -126,11 +149,11 @@ const Controlling: React.FC<ControllingProps> = ({
             opacity: !isConnected ? 0.5 : 1
           }
         ]}
-        disabled={!isConnected || solCStatus === 'hold_vacuum' || solCStatus === 'hold_pressure'}
+        disabled={!isConnected}
       >
         <Text style={[
           styles.buttonText,
-          { color: !isConnected ? 'black' : (solCStatus === 'vacuum' || solCStatus === 'hold_vacuum' ? 'white' : 'black') }
+          { color: !isConnected ? 'black' : 'white' }
         ]}>
           {getZoneButtonText(solCStatus, 'C')}
         </Text>
@@ -143,25 +166,37 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-evenly',
-    marginVertical: 20,
-    paddingHorizontal: 16,
+    marginVertical: 15,
+    paddingHorizontal: 10,
   },
   controlButton: {
-    width: 80,
-    height: 80,
-    padding: 10,
-    borderRadius: 10,
+    width: 85,
+    height: 85,
+    padding: 8,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.23,
+    shadowRadius: 2.62,
+    margin: 5,
   },
   buttonTextContainer: {
     flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     textAlign: 'center',
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'white',
+    marginVertical: 2,
   }
 });
 

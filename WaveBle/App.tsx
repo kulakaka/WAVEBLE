@@ -32,16 +32,17 @@ const App = () => {
   const [isModealVisible, setIsModealVisible] = useState(false);
   const [ledStatus, setLedStatus] = useState('cycle_off');
   const [pumpStatus, setPumpStatus] = useState<'Pump_ON' | 'Pump_OFF'>('Pump_OFF');
-  const [solAStatus, setSolAStatus] = useState<'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure'>('pressure');
-  const [solBStatus, setSolBStatus] = useState<'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure'>('pressure');
-  const [solCStatus, setSolCStatus] = useState<'pressure' | 'vacuum' | 'hold_vacuum' | 'hold_pressure'>('pressure');
+  const [solAStatus, setSolAStatus] = useState<'pressure' | 'vaccum' | 'hold'>('hold');
+  const [solBStatus, setSolBStatus] = useState<'pressure' | 'vaccum' | 'hold'>('hold');
+  const [solCStatus, setSolCStatus] = useState<'pressure' | 'vaccum' | 'hold'>('hold');
 
   const [text, onChangeText] = React.useState("");
   const [outputText, setOutputText] = useState('Output will be displayed here...');
   const [fullcycleValue, setfullcycleValue] = useState(0);
   const [halfcycleValue, sethalfcycleValue] = useState(120);
-  const [pumpTime, setPumpTime] = useState(30);
   const [pumpSpeed, setPumpSpeed] = useState(10);
+  const [pumpPressureTime, setPumpPressureTime] = useState(29);
+  const [pumpVaccumTime, setPumpVaccumTime] = useState(31);
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [cameraAuthorized, setCameraAuthorized] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -189,19 +190,19 @@ const App = () => {
 
     const subscription = bleManager.onDeviceDisconnected(device.id, (error, disconnectedDevice) => {
       console.log('Device disconnected:', disconnectedDevice?.name);
-      
+
       if (error) {
         console.log('Disconnection error:', error);
         setIsConnected(false);
         setConnectedDevice(null);
         setDevices([]);
-        setSolAStatus('pressure');
-        setSolBStatus('pressure');
-        setSolCStatus('pressure');
+        setSolAStatus('hold');
+        setSolBStatus('hold');
+        setSolCStatus('hold');
         setPumpStatus('Pump_OFF');
         setLedStatus('cycle_off');
         setIsConnecting(false);
-        
+
         Alert.alert(
           'Device Disconnected',
           'The connection to the device was lost. Please reconnect.',
@@ -254,99 +255,75 @@ const App = () => {
   // Handle notifications from the device firmware
   const handleNotification = (decodedValue: string) => {
     console.log('Raw notification received:', decodedValue);
-    
+
     if (decodedValue.split(';').length === 4) {
       const params = decodedValue.split(';');
       console.log('Correct number of parameters found');
       const storedCycleTime = parseInt(params[0]) / 3000;
-      const storedPumpTime = parseInt(params[1])/1000;
+      const storedPumpTime = parseInt(params[1]) / 1000;
       const storedPumpSpeed = parseInt(params[2]);
       const storedCycleStatus = params[3] === '1';
-      const actualPumpSpeed = Math.round((storedPumpSpeed-230)/2.5);
+      const actualPumpSpeed = Math.round((storedPumpSpeed - 230) / 2.5);
 
       console.log('Parsed values:');
       console.log('Cycle Time:', storedCycleTime);
-      console.log('Pump Time:', storedPumpTime);
+      console.log('Pump Pressure Time:', storedPumpTime);
+      console.log('Pump Vaccum Time:', storedPumpTime);
       console.log('Pump Speed:', actualPumpSpeed);
       console.log('Cycle Status:', storedCycleStatus);
 
       sethalfcycleValue(storedCycleTime);
-      setPumpTime(storedPumpTime);
       setPumpSpeed(actualPumpSpeed);
+      setPumpPressureTime(storedPumpTime);
+      setPumpVaccumTime(storedPumpTime);
       setLedStatus(storedCycleStatus ? 'cycle_on' : 'cycle_off');
     }
-    
-    if (decodedValue === 'Solenoid A ON') {
+
+    if (decodedValue === 'A Pressure') {
+      console.log('Received A Pressure');
+      setSolAStatus('vaccum');
+    }
+    if (decodedValue === 'A Vaccum') {
+      console.log('Received A Vaccum');
+      setSolAStatus('hold');
+    }
+    if (decodedValue === 'A Hold') {
+      console.log('Received A Hold');
       setSolAStatus('pressure');
     }
-    if (decodedValue === 'Solenoid B ON') {
+    if (decodedValue === 'B Pressure') {
+      console.log('Received B Pressure');
+      setSolBStatus('vaccum');
+    }
+    if (decodedValue === 'B Vaccum') {
+      console.log('Received B Vaccum');
+      setSolBStatus('hold');
+    }
+    if (decodedValue === 'B Hold') {
+      console.log('Received B Hold');
       setSolBStatus('pressure');
     }
-    if (decodedValue === 'Solenoid C ON') {
+    if (decodedValue === 'C Pressure') {
+      console.log('Received C Pressure');
+      setSolCStatus('vaccum');
+    }
+    if (decodedValue === 'C Vaccum') {
+      console.log('Received C Vaccum');
+      setSolCStatus('hold');
+    }
+    if (decodedValue === 'C Hold') {
+      console.log('Received C Hold');
       setSolCStatus('pressure');
     }
-    if (decodedValue === 'Solenoid A OFF') {
-      setSolAStatus('vacuum');
-    }
-    if (decodedValue === 'Solenoid B OFF') {
-      setSolBStatus('vacuum');
-    }
-    if (decodedValue === 'Solenoid C OFF') {
-      setSolCStatus('vacuum');
-    }
-    if (decodedValue === 'Cycle A On') {
-      setPumpStatus('Pump_ON');
-      setSolAStatus('vacuum');
-      setSolBStatus('pressure');
-      setSolCStatus('pressure');
+    if (decodedValue === 'Cycle ON') {
       setLedStatus('cycle_on');
-      setCurrentZone('A');
     }
-    if (decodedValue === 'Cycle A OFF') {
-      setPumpStatus('Pump_OFF');
-      setSolAStatus('hold_vacuum');
-      setSolBStatus('hold_pressure');
-      setSolCStatus('hold_pressure');
-      setLedStatus('cycle_on');
-      setCurrentZone('A');
-    }
-    if (decodedValue === 'Cycle B On') {
-      setPumpStatus('Pump_ON');
-      setSolAStatus('pressure');
-      setSolBStatus('vacuum');
-      setSolCStatus('pressure');
-      setLedStatus('cycle_on');
-      setCurrentZone('B');
-    }
-    if (decodedValue === 'Cycle B OFF') {
-      setPumpStatus('Pump_OFF');
-      setSolAStatus('hold_pressure');
-      setSolBStatus('hold_vacuum');
-      setSolCStatus('hold_pressure');
-      setLedStatus('cycle_on');
-      setCurrentZone('B');
-    }
-    if (decodedValue === 'Cycle C On') {
-      setPumpStatus('Pump_ON');
-      setSolAStatus('pressure');
-      setSolBStatus('pressure');
-      setSolCStatus('vacuum');
-      setLedStatus('cycle_on');
-      setCurrentZone('C');
-    }
-    if (decodedValue === 'Cycle C OFF') {
-      setPumpStatus('Pump_OFF');
-      setSolAStatus('hold_pressure');
-      setSolBStatus('hold_pressure');
-      setSolCStatus('hold_vacuum');
-      setLedStatus('cycle_on');
-      setCurrentZone('C');
-    }
+
     if (decodedValue === 'Cycle OFF') {
       setLedStatus('cycle_off');
-      setSolAStatus('pressure');
-      setSolBStatus('pressure');
-      setSolCStatus('pressure');
+      setSolAStatus('hold');
+      setSolBStatus('hold');
+      setSolCStatus('hold');
       setPumpStatus('Pump_OFF');
       setIsStoppingCycle(false);
       setCurrentZone(null);
@@ -360,6 +337,30 @@ const App = () => {
       setPumpStatus('Pump_ON');
     }
     if (decodedValue === 'Pump OFF') {
+      setPumpStatus('Pump_OFF');
+    }
+    if (decodedValue === 'VHP') {
+      setPumpStatus('Pump_ON');
+      setSolAStatus('vaccum');
+      setSolBStatus('hold');
+      setSolCStatus('pressure');
+    }
+    if (decodedValue === 'PVH') {
+      setPumpStatus('Pump_ON');
+      setSolAStatus('pressure');
+      setSolBStatus('vaccum');
+      setSolCStatus('hold');
+    }
+    if (decodedValue === 'HPV') {
+      setPumpStatus('Pump_ON');
+      setSolAStatus('hold');
+      setSolBStatus('pressure');
+      setSolCStatus('vaccum');
+    }
+    if (decodedValue === 'HOLD') {
+      setSolAStatus('hold');
+      setSolBStatus('hold');
+      setSolCStatus('hold');
       setPumpStatus('Pump_OFF');
     }
   };
@@ -390,8 +391,8 @@ const App = () => {
     }
   };
 
-  
-  const togglecycle = async (status: string, halfcycleValue: number, pumpTime: number) => {
+
+  const togglecycle = async (status: string, halfcycleValue: number, pumpPressureTime: number, pumpVaccumTime: number) => {
     console.log('Toggle Cycle:', status);
     if (!connectedDevice) {
       console.log('No device connected');
@@ -425,10 +426,9 @@ const App = () => {
           )
         })
     }
-    
+
     if (status === 'cycle_on') {
       console.log('Half Cycle:', halfcycleValue);
-      console.log('Pump Time:', pumpTime);
       console.log('Pump Speed:', pumpSpeed);
 
       // Validate pump speed (1-10)
@@ -443,36 +443,22 @@ const App = () => {
       }
 
       // Validate half cycle time (45-3600 seconds)
-      const halfCycleSeconds = halfcycleValue/1000;
+      const halfCycleSeconds = halfcycleValue / 1000;
       if (halfCycleSeconds < 45 || halfCycleSeconds > 3600) {
         console.log('Invalid half cycle time');
         Alert.alert('Invalid half cycle time', 'Half cycle time must be between 45 and 3600 seconds');
         return;
       }
 
-      // Validate pump time (10-30 seconds)
-      const pumpTimeSeconds = pumpTime/1000;
-      if (pumpTimeSeconds < 10 || pumpTimeSeconds > 30) {
-        console.log('Invalid pump time');
-        Alert.alert('Invalid pump time', 'Pump time must be between 10 and 30 seconds');
-        return;
-      }
-
-      // Validate pump time is less than half cycle time
-      if (pumpTimeSeconds >= halfCycleSeconds) {
-        console.log('Pump time must be less than half cycle time');
-        Alert.alert('Invalid pump time', 'Pump time must be less than half cycle time');
-        return;
-      }
 
       // Calculate actual pump speed
       const actualPumpSpeed = Math.round(2.5 * pumpSpeed + 230);
       console.log('Actual Pump Speed:', actualPumpSpeed);
 
-      const fullcycleValue = halfcycleValue * 3;
-      const timeMessage = `set_params;${fullcycleValue};${pumpTime};${actualPumpSpeed}`;
+
+      const timeMessage = `set_params;${halfcycleValue};${pumpPressureTime};${pumpVaccumTime};${actualPumpSpeed}`;
       console.log('Time Message:', timeMessage);
-      
+
       bleManager.writeCharacteristicWithResponseForDevice(
         connectedDevice.id,
         SERVICE_UUID,
@@ -496,8 +482,8 @@ const App = () => {
           )
         })
     }
-    
-    
+
+
   };
 
   const handleCycleChange = (text: any) => {
@@ -506,9 +492,7 @@ const App = () => {
     setfullcycleValue(fullCycle);
   }
 
-  const handlePumpChange = (text: any) => {
-    setPumpTime(text);
-  }
+
 
   const togglePump = async (status: string) => {
     if (!connectedDevice) {
@@ -555,7 +539,7 @@ const App = () => {
         connectedDevice.id,
         SERVICE_UUID,
         CHARACTERISTIC_UUID_TX,
-        base64.encode(status)
+        base64.encode("A_" + status)
       )
         .then(() => {
   
@@ -592,7 +576,7 @@ const App = () => {
       connectedDevice.id,
       SERVICE_UUID,
       CHARACTERISTIC_UUID_TX,
-      base64.encode(status)
+      base64.encode("B_" + status)
     )
       .then(() => {
 
@@ -624,7 +608,7 @@ const App = () => {
       connectedDevice.id,
       SERVICE_UUID,
       CHARACTERISTIC_UUID_TX,
-      base64.encode(status)
+      base64.encode("C_" + status)
     )
       .then(() => {
 
@@ -644,6 +628,17 @@ const App = () => {
         )
       })
   };
+
+  const handlePumpPressureChange = (value: number) => {
+    const boundedValue = Math.min(Math.max(value, 0), 255);
+    setPumpPressureTime(boundedValue);
+  };
+
+  const handlePumpVaccumChange = (value: number) => {
+    const boundedValue = Math.min(Math.max(value, 0), 255);
+    setPumpVaccumTime(boundedValue);
+  };
+
 
   const handlePumpSpeedChange = (value: number) => {
     const boundedValue = Math.min(Math.max(value, 0), 255);
@@ -690,7 +685,7 @@ const App = () => {
 
           <TouchableOpacity
             onPress={() => {
-              togglecycle(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on', halfcycleValue * 1000, pumpTime * 1000);
+              togglecycle(ledStatus === 'cycle_on' ? 'cycle_off' : 'cycle_on', halfcycleValue * 1000, pumpPressureTime * 1000, pumpVaccumTime * 1000);
             }}
             style={[
               styles.mainButton,
@@ -711,19 +706,19 @@ const App = () => {
         </View>
       </View>
       <View style={styles.controlsContainer}>
-      <Controlling
-        isConnected={isConnected}
-        pumpStatus={pumpStatus}
-        solAStatus={solAStatus}
-        solBStatus={solBStatus}
-        solCStatus={solCStatus}
-        togglePump={togglePump}
-        toggleSolA={toggleSolA}
-        toggleSolB={toggleSolB}
-        toggleSolC={toggleSolC}
-      />
+        <Controlling
+          isConnected={isConnected}
+          pumpStatus={pumpStatus}
+          solAStatus={solAStatus}
+          solBStatus={solBStatus}
+          solCStatus={solCStatus}
+          togglePump={togglePump}
+          toggleSolA={toggleSolA}
+          toggleSolB={toggleSolB}
+          toggleSolC={toggleSolC}
+        />
       </View>
-    
+
       <View style={styles.controlsContainer}>
         <View style={styles.inputsRow}>
           <View style={styles.inputGroup}>
@@ -740,12 +735,20 @@ const App = () => {
             <TextInput
               style={styles.numericInput}
               keyboardType='numeric'
-              onChangeText={(text) => handlePumpChange(text)}
-              value={pumpTime.toString()}
+              onChangeText={(text) => handlePumpPressureChange(parseInt(text) || 0)}
+              value={pumpPressureTime.toString()}
             />
-            <Text style={styles.smallInputLabel}>Pump Time</Text>
+            <Text style={styles.smallInputLabel}>Pressure Time</Text>
           </View>
-
+          <View style={styles.inputGroup}>
+            <TextInput
+              style={styles.numericInput}
+              keyboardType='numeric'
+              onChangeText={(text) => handlePumpVaccumChange(parseInt(text) || 0)}
+              value={pumpVaccumTime.toString()}
+            />
+            <Text style={styles.smallInputLabel}>Vaccum Time</Text>
+          </View>
           <View style={styles.inputGroup}>
             <TextInput
               style={styles.numericInput}
@@ -762,7 +765,7 @@ const App = () => {
             isPlaying={ledStatus === 'cycle_on'}
             currentZone={currentZone}
             pumpStatus={pumpStatus}
-            pumpTime={pumpTime * 1000}
+            pumpTime={pumpPressureTime * 1000}
           />
         </View>
       </View>
