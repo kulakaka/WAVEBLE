@@ -41,8 +41,8 @@ const App = () => {
   const [fullcycleValue, setfullcycleValue] = useState(0);
   const [halfcycleValue, sethalfcycleValue] = useState(120);
   const [pumpSpeed, setPumpSpeed] = useState(10);
-  const [pumpPressureTime, setPumpPressureTime] = useState(29);
-  const [pumpVaccumTime, setPumpVaccumTime] = useState(31);
+  const [pumpPressureTime, setPumpPressureTime] = useState(7);
+  const [pumpVaccumTime, setPumpVaccumTime] = useState(9);
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [cameraAuthorized, setCameraAuthorized] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -163,7 +163,7 @@ const App = () => {
             }
             return prevState;
           });
-
+      
           if (device.id === qr) {
             console.log('Device found', device.name);
             setConnectedDevice(device);

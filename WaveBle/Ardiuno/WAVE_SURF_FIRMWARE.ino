@@ -42,7 +42,7 @@ bool ResetActive = false;
 unsigned long fullyCycleTime = 360000;  // Default 3 times of interval (3 * 3000ms)
 unsigned long interval = fullyCycleTime / 3 ;
 unsigned long pumpTime = 30000;  // Default pump time (in milliseconds)
-unsigned long cushionInitTime = 20000;
+unsigned long cushionInitTime = 30000;
 unsigned int pwmvalue = 255;
 unsigned long CyclIntvl = 120000;
 unsigned long VaccIntvl = 9000;
@@ -168,75 +168,75 @@ class MyCallbacks: public BLECharacteristicCallbacks {
 
         if (rxValue == "a_pressure")
         {
-            digitalWrite(SAPPin, HIGH);
-            digitalWrite(AINPin, HIGH);
-            digitalWrite(SAVPin, LOW);
-            digitalWrite(AOUPin, LOW);
-            sendMessage("A Pressure");
+          digitalWrite(SAPPin, HIGH);
+          digitalWrite(AINPin, HIGH);
+          digitalWrite(SAVPin, LOW);
+          digitalWrite(AOUPin, LOW);
+          sendMessage("A Pressure");
         }
         if (rxValue == "a_vaccum")
         {
-            digitalWrite(SAPPin, LOW);
-            digitalWrite(AINPin, LOW);
-            digitalWrite(SAVPin, HIGH);
-            digitalWrite(AOUPin, HIGH);
-            sendMessage("A Vaccum");
+          digitalWrite(SAPPin, LOW);
+          digitalWrite(AINPin, LOW);
+          digitalWrite(SAVPin, HIGH);
+          digitalWrite(AOUPin, HIGH);
+          sendMessage("A Vaccum");
         }
         if (rxValue == "a_hold")
         {
-            digitalWrite(SAPPin, LOW);
-            digitalWrite(AINPin, LOW);
-            digitalWrite(SAVPin, LOW);
-            digitalWrite(AOUPin, LOW);
-            sendMessage("A Hold");
+          digitalWrite(SAPPin, LOW);
+          digitalWrite(AINPin, LOW);
+          digitalWrite(SAVPin, LOW);
+          digitalWrite(AOUPin, LOW);
+          sendMessage("A Hold");
         }
         if (rxValue == "b_pressure")
         {
-            digitalWrite(SBPPin, HIGH);
-            digitalWrite(AINPin, HIGH);
-            digitalWrite(SBVPin, LOW);
-            digitalWrite(AOUPin, LOW);
-            sendMessage("B Pressure");
+          digitalWrite(SBPPin, HIGH);
+          digitalWrite(AINPin, HIGH);
+          digitalWrite(SBVPin, LOW);
+          digitalWrite(AOUPin, LOW);
+          sendMessage("B Pressure");
         }
         if (rxValue == "b_vaccum")
         {
-            digitalWrite(SBPPin, LOW);
-            digitalWrite(AINPin, LOW);
-            digitalWrite(SBVPin, HIGH);
-            digitalWrite(AOUPin, HIGH);
-            sendMessage("B Vaccum");
+          digitalWrite(SBPPin, LOW);
+          digitalWrite(AINPin, LOW);
+          digitalWrite(SBVPin, HIGH);
+          digitalWrite(AOUPin, HIGH);
+          sendMessage("B Vaccum");
         }
         if (rxValue == "b_hold")
         {
-            digitalWrite(SBPPin, LOW);
-            digitalWrite(AINPin, LOW);
-            digitalWrite(SBVPin, LOW);
-            digitalWrite(AOUPin, LOW);
-            sendMessage("B Hold");
+          digitalWrite(SBPPin, LOW);
+          digitalWrite(AINPin, LOW);
+          digitalWrite(SBVPin, LOW);
+          digitalWrite(AOUPin, LOW);
+          sendMessage("B Hold");
         }
         if (rxValue == "c_pressure")
         {
-            digitalWrite(SCPPin, HIGH);
-            digitalWrite(AINPin, HIGH);
-            digitalWrite(SCVPin, LOW);
-            digitalWrite(AOUPin, LOW);
-            sendMessage("C Pressure");
+          digitalWrite(SCPPin, HIGH);
+          digitalWrite(AINPin, HIGH);
+          digitalWrite(SCVPin, LOW);
+          digitalWrite(AOUPin, LOW);
+          sendMessage("C Pressure");
         }
         if (rxValue == "c_vaccum")
         {
-            digitalWrite(SCPPin, LOW);
-            digitalWrite(AINPin, LOW);
-            digitalWrite(SCVPin, HIGH);
-            digitalWrite(AOUPin, HIGH);
-            sendMessage("C Vaccum");
+          digitalWrite(SCPPin, LOW);
+          digitalWrite(AINPin, LOW);
+          digitalWrite(SCVPin, HIGH);
+          digitalWrite(AOUPin, HIGH);
+          sendMessage("C Vaccum");
         }
         if (rxValue == "c_hold")
         {
-            digitalWrite(SCPPin, LOW);
-            digitalWrite(AINPin, LOW);
-            digitalWrite(SCVPin, LOW);
-            digitalWrite(AOUPin, LOW);
-            sendMessage("C Hold");
+          digitalWrite(SCPPin, LOW);
+          digitalWrite(AINPin, LOW);
+          digitalWrite(SCVPin, LOW);
+          digitalWrite(AOUPin, LOW);
+          sendMessage("C Hold");
         }
 
       }
@@ -288,31 +288,31 @@ void setup() {
   digitalWrite(AINPin, LOW); //Set Ambient In Solenoid Pin to LOW
   digitalWrite(AOUPin, LOW); //Set Ambient Out Solenoid Pin to LOW
   digitalWrite(PUMP_PIN, LOW); //Set Pump Pin to LOW
-  //
-  //  //Initialize beginning state of cushion, taking everything to zero position
-  //  digitalWrite(AOUPin, HIGH); //Energize the AOU solenoid, opening an exhaust port to ambient air
-  //  digitalWrite(PUMP_PIN, HIGH); //Energize the pump
-  //  digitalWrite(SAVPin, HIGH); //Energize the SAV solenoid, vacuum out the A zone, venting the air to ambient
-  //  delay(VaccInit);           //Do this for the amount of time specified by the VaccIntvl constant
-  //  digitalWrite(SAVPin, LOW);  //De-energize the SAV solenoid, closing off the A zone in a fully deflated state
-  //  digitalWrite(SBVPin, HIGH); //Energize the SBV solenoid, vacuum out the B zone, venting the air to ambient
-  //  delay(VaccInit);           //Do this for the amount of time specified by the VaccIntvl constant
-  //  digitalWrite(SBVPin, LOW);  //De-energize the SBV solenoid, closing off the B zone in a fully deflated state
-  //  digitalWrite(SCVPin, HIGH); //Energize the SCV solenoid, vacuum out the C zone, venting the air to ambient
-  //  delay(VaccInit);           //Do this for the amount of time specified by the VaccIntvl constant
-  //  digitalWrite(SCVPin, LOW);  //De-energize the SCV solenoid, closing off the C zone in a fully deflated state
-  //  digitalWrite(AOUPin, LOW);  //De-energize the AOU solenoid, closing the exhaust port to ambient air
-  //  //At this point all zones should be fully deflated and locked off
-  //
-  //  digitalWrite(AINPin, HIGH); //Energize the AIN solenoid, opening the input port to ambient air
-  //  digitalWrite(SAPPin, HIGH); //Energize the SAP solenoid, pressurize the A zone, drawing in air from ambient
-  //  delay(PresInit);           //Do this for the amount of time specified by the PresIntvl constant
-  //  digitalWrite(SAPPin, LOW);  //De-energize the SAP solenoid, closing off the A zone in a fully inflated state
-  //  digitalWrite(SBPPin, HIGH); //Energize the SBP solenoid, pressurize the B zone, drawing air in from ambient
-  //  delay(PresInit);           //Do this for the amount of time specified by the PresIntvl constant
-  //  digitalWrite(SBPPin, LOW);  //De-energize the SBP solenoid, closing off the B zone in a fully inflated state
-  //  digitalWrite(AINPin, LOW);  //De-energize the AIN solenoid, closing the input port to ambient air
-  //  digitalWrite(PUMP_PIN, LOW);  //De-energize the pump
+
+  //Initialize beginning state of cushion, taking everything to zero position
+  digitalWrite(AOUPin, HIGH); //Energize the AOU solenoid, opening an exhaust port to ambient air
+  digitalWrite(PUMP_PIN, HIGH); //Energize the pump
+  digitalWrite(SAVPin, HIGH); //Energize the SAV solenoid, vacuum out the A zone, venting the air to ambient
+  delay(VaccInit);           //Do this for the amount of time specified by the VaccIntvl constant
+  digitalWrite(SAVPin, LOW);  //De-energize the SAV solenoid, closing off the A zone in a fully deflated state
+  digitalWrite(SBVPin, HIGH); //Energize the SBV solenoid, vacuum out the B zone, venting the air to ambient
+  delay(VaccInit);           //Do this for the amount of time specified by the VaccIntvl constant
+  digitalWrite(SBVPin, LOW);  //De-energize the SBV solenoid, closing off the B zone in a fully deflated state
+  digitalWrite(SCVPin, HIGH); //Energize the SCV solenoid, vacuum out the C zone, venting the air to ambient
+  delay(VaccInit);           //Do this for the amount of time specified by the VaccIntvl constant
+  digitalWrite(SCVPin, LOW);  //De-energize the SCV solenoid, closing off the C zone in a fully deflated state
+  digitalWrite(AOUPin, LOW);  //De-energize the AOU solenoid, closing the exhaust port to ambient air
+  //At this point all zones should be fully deflated and locked off
+
+  digitalWrite(AINPin, HIGH); //Energize the AIN solenoid, opening the input port to ambient air
+  digitalWrite(SAPPin, HIGH); //Energize the SAP solenoid, pressurize the A zone, drawing in air from ambient
+  delay(PresInit);           //Do this for the amount of time specified by the PresIntvl constant
+  digitalWrite(SAPPin, LOW);  //De-energize the SAP solenoid, closing off the A zone in a fully inflated state
+  digitalWrite(SBPPin, HIGH); //Energize the SBP solenoid, pressurize the B zone, drawing air in from ambient
+  delay(PresInit);           //Do this for the amount of time specified by the PresIntvl constant
+  digitalWrite(SBPPin, LOW);  //De-energize the SBP solenoid, closing off the B zone in a fully inflated state
+  digitalWrite(AINPin, LOW);  //De-energize the AIN solenoid, closing the input port to ambient air
+  digitalWrite(PUMP_PIN, LOW);  //De-energize the pump
   //At this point the A & B zones should be fully inflated and locked
 
   Serial.println("Initialization complete");
@@ -382,7 +382,7 @@ void loop() {
         VaccIntvlActive = true;
       }
     }
-    else if (timeInCycle < (CombIntvl + VaccIntvl)) {
+    else if (timeInCycle < (VaccIntvl + CombIntvl) && timeInCycle > CombIntvl) {
       if (VaccIntvlActive) {
         Serial.println("Starting vacuum phase");
         handleVacuumPhase();
@@ -390,7 +390,7 @@ void loop() {
         PresIntvlActive = true;
       }
     }
-    else if (timeInCycle < (CombIntvl + VaccIntvl + PresIntvl)) {
+    else if (timeInCycle < (PresIntvl + VaccIntvl + CombIntvl) && timeInCycle > (VaccIntvl + CombIntvl)) {
       if (PresIntvlActive) {
         Serial.println("Starting pressure phase");
         handlePressurePhase();
@@ -399,13 +399,7 @@ void loop() {
       }
     }
     else if (timeInCycle < CyclIntvl) {
-      // Send HOLD message every 500ms during resting phase
-      static unsigned long lastHoldMessage = 0;
-      if (currentMillis - lastHoldMessage >= 500) {
-        sendMessage("HOLD");
-        lastHoldMessage = currentMillis;
-      }
-      
+
       if (ResetActive) {
         Serial.println("Starting reset phase");
         switch (currentState) {
@@ -530,6 +524,32 @@ void handleReinitalPhase() {
   digitalWrite(SCVPin, LOW);
   digitalWrite(AINPin, LOW);
   digitalWrite(AOUPin, LOW);
+  
+  //Initialize beginning state of cushion, taking everything to zero position
+  digitalWrite(AOUPin, HIGH); //Energize the AOU solenoid, opening an exhaust port to ambient air
+  digitalWrite(PUMP_PIN, HIGH); //Energize the pump
+  digitalWrite(SAVPin, HIGH); //Energize the SAV solenoid, vacuum out the A zone, venting the air to ambient
+  delay(VaccInit);           //Do this for the amount of time specified by the VaccIntvl constant
+  digitalWrite(SAVPin, LOW);  //De-energize the SAV solenoid, closing off the A zone in a fully deflated state
+  digitalWrite(SBVPin, HIGH); //Energize the SBV solenoid, vacuum out the B zone, venting the air to ambient
+  delay(VaccInit);           //Do this for the amount of time specified by the VaccIntvl constant
+  digitalWrite(SBVPin, LOW);  //De-energize the SBV solenoid, closing off the B zone in a fully deflated state
+  digitalWrite(SCVPin, HIGH); //Energize the SCV solenoid, vacuum out the C zone, venting the air to ambient
+  delay(VaccInit);           //Do this for the amount of time specified by the VaccIntvl constant
+  digitalWrite(SCVPin, LOW);  //De-energize the SCV solenoid, closing off the C zone in a fully deflated state
+  digitalWrite(AOUPin, LOW);  //De-energize the AOU solenoid, closing the exhaust port to ambient air
+  //At this point all zones should be fully deflated and locked off
+
+  digitalWrite(AINPin, HIGH); //Energize the AIN solenoid, opening the input port to ambient air
+  digitalWrite(SAPPin, HIGH); //Energize the SAP solenoid, pressurize the A zone, drawing in air from ambient
+  delay(PresInit);           //Do this for the amount of time specified by the PresIntvl constant
+  digitalWrite(SAPPin, LOW);  //De-energize the SAP solenoid, closing off the A zone in a fully inflated state
+  digitalWrite(SBPPin, HIGH); //Energize the SBP solenoid, pressurize the B zone, drawing air in from ambient
+  delay(PresInit);           //Do this for the amount of time specified by the PresIntvl constant
+  digitalWrite(SBPPin, LOW);  //De-energize the SBP solenoid, closing off the B zone in a fully inflated state
+  digitalWrite(AINPin, LOW);  //De-energize the AIN solenoid, closing the input port to ambient air
+  digitalWrite(PUMP_PIN, LOW);  //De-energize the pump
+  //At this point the A & B zones should be fully inflated and locked
 }
 
 void sendCurrentStatus() {
